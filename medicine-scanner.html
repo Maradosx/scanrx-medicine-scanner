@@ -1,0 +1,3025 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ScanRx · เครื่องอ่านฉลากยาอัจฉริยะ</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800;9..144,900&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<!-- ScanRx · Gemini Vision + jsQR สำหรับถอด QR code -->
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+<style>
+  :root {
+    --bg: #EFE9DC;
+    --bg-deep: #E6DECC;
+    --surface: #FBF9F2;
+    --ink: #131311;
+    --ink-soft: #2A2924;
+    --primary: #0E4A38;
+    --primary-deep: #073023;
+    --accent: #E85D2A;
+    --highlight: #F4C543;
+    --muted: #756F61;
+    --line: rgba(19, 19, 17, 0.14);
+    --line-strong: rgba(19, 19, 17, 0.28);
+    --danger: #B82E1B;
+    --success: #2E7D4F;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans Thai', 'IBM Plex Sans', sans-serif;
+    font-weight: 400;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    min-height: 100vh;
+  }
+
+  body {
+    background:
+      radial-gradient(circle at 15% 8%, rgba(232, 93, 42, 0.06), transparent 45%),
+      radial-gradient(circle at 88% 92%, rgba(14, 74, 56, 0.08), transparent 50%),
+      var(--bg);
+    overflow-x: hidden;
+  }
+
+  .serif { font-family: 'Fraunces', 'Times New Roman', serif; font-feature-settings: "ss01", "ss02"; }
+  .mono  { font-family: 'JetBrains Mono', monospace; }
+
+  /* ---------- TOP BAR ---------- */
+  .topbar {
+    border-bottom: 1px solid var(--line);
+    background: rgba(239, 233, 220, 0.9);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .topbar-inner {
+    max-width: 1480px;
+    margin: 0 auto;
+    padding: 18px 32px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 32px;
+    align-items: center;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .brand-mark {
+    width: 44px; height: 44px;
+    background: var(--ink);
+    color: var(--bg);
+    display: grid;
+    place-items: center;
+    font-family: 'Fraunces', serif;
+    font-weight: 900;
+    font-size: 24px;
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+  }
+  .brand-mark::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 40%, var(--accent) 40%, var(--accent) 60%, transparent 60%);
+    opacity: 0.85;
+    mix-blend-mode: screen;
+  }
+  .brand-mark span { position: relative; z-index: 2; }
+  .brand-text { line-height: 1; }
+  .brand-name {
+    font-family: 'Fraunces', serif;
+    font-weight: 800;
+    font-size: 22px;
+    letter-spacing: -0.02em;
+  }
+  .brand-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  .topnav {
+    display: flex;
+    gap: 4px;
+    justify-self: center;
+  }
+  .topnav a {
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink-soft);
+    text-decoration: none;
+    border-radius: 999px;
+    transition: background 0.2s, color 0.2s;
+  }
+  .topnav a:hover { background: var(--bg-deep); }
+  .topnav a.active {
+    background: var(--ink);
+    color: var(--bg);
+  }
+
+  .top-status {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    background: var(--muted);
+    border-radius: 50%;
+    position: relative;
+  }
+  .status-dot.live {
+    background: var(--success);
+    box-shadow: 0 0 0 0 rgba(46, 125, 79, 0.5);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(46, 125, 79, 0.55); }
+    70% { box-shadow: 0 0 0 8px rgba(46, 125, 79, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(46, 125, 79, 0); }
+  }
+
+  /* ---------- HERO ---------- */
+  .hero {
+    max-width: 1480px;
+    margin: 0 auto;
+    padding: 56px 32px 28px;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 48px;
+    align-items: end;
+    border-bottom: 1px solid var(--line);
+  }
+  .hero-num {
+    font-family: 'Fraunces', serif;
+    font-weight: 900;
+    font-size: 180px;
+    line-height: 0.78;
+    letter-spacing: -0.06em;
+    color: var(--primary);
+    font-variation-settings: "opsz" 144;
+  }
+  .hero-num em {
+    font-style: italic;
+    color: var(--accent);
+  }
+  .hero-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 56px;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+  }
+  .hero-title em {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--muted);
+  }
+  .hero-sub {
+    font-size: 15px;
+    color: var(--ink-soft);
+    max-width: 380px;
+    margin-top: 16px;
+    line-height: 1.55;
+  }
+  .hero-meta {
+    text-align: right;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+  .hero-meta strong {
+    display: block;
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 700;
+    margin-top: 4px;
+  }
+
+  /* ---------- MAIN GRID ---------- */
+  .main {
+    max-width: 1480px;
+    margin: 0 auto;
+    padding: 40px 32px 64px;
+    display: grid;
+    grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
+    gap: 32px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .card-header {
+    padding: 18px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg-deep);
+  }
+  .card-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .card-eyebrow b { color: var(--accent); }
+  .card-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 20px;
+    margin-top: 2px;
+    letter-spacing: -0.01em;
+  }
+
+  /* ---------- CAMERA PANEL ---------- */
+  .cam-card {
+    display: flex;
+    flex-direction: column;
+  }
+  .cam-stage {
+    position: relative;
+    aspect-ratio: 4 / 3;
+    background: #0B0B09;
+    overflow: hidden;
+  }
+  .cam-stage video,
+  .cam-stage canvas#snapshot {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+  }
+  .cam-stage canvas#snapshot {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+  .cam-stage canvas#snapshot.show { opacity: 1; }
+
+  /* viewfinder overlay */
+  .viewfinder {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    display: grid;
+    place-items: center;
+  }
+  .vf-frame {
+    width: 78%;
+    height: 56%;
+    border: 1px solid rgba(255,255,255,0.35);
+    position: relative;
+  }
+  .vf-corner {
+    position: absolute;
+    width: 28px; height: 28px;
+    border: 3px solid var(--highlight);
+  }
+  .vf-corner.tl { top: -2px; left: -2px; border-right: 0; border-bottom: 0; }
+  .vf-corner.tr { top: -2px; right: -2px; border-left: 0; border-bottom: 0; }
+  .vf-corner.bl { bottom: -2px; left: -2px; border-right: 0; border-top: 0; }
+  .vf-corner.br { bottom: -2px; right: -2px; border-left: 0; border-top: 0; }
+  .vf-label {
+    position: absolute;
+    top: -28px; left: 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--highlight);
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  .vf-scanline {
+    position: absolute;
+    left: 0; right: 0; top: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+    box-shadow: 0 0 16px var(--accent);
+    opacity: 0;
+  }
+  .scanning .vf-scanline {
+    opacity: 1;
+    animation: scan 2.4s linear infinite;
+  }
+  @keyframes scan {
+    0%   { top: 0%; }
+    50%  { top: 100%; }
+    100% { top: 0%; }
+  }
+
+  /* HUD info on camera */
+  .cam-hud {
+    position: absolute;
+    top: 16px; left: 16px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .hud-chip {
+    background: rgba(11, 11, 9, 0.65);
+    backdrop-filter: blur(6px);
+    color: #fff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    padding: 6px 10px;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 2px;
+  }
+  .hud-chip.rec { color: var(--accent); }
+  .hud-chip.rec::before {
+    content: '●';
+    margin-right: 6px;
+    animation: blink 1.2s infinite;
+  }
+  @keyframes blink { 50% { opacity: 0.2; } }
+
+  .cam-hud-right {
+    position: absolute;
+    top: 16px; right: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    align-items: flex-end;
+  }
+
+  .cam-empty {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    color: rgba(255,255,255,0.7);
+    background: linear-gradient(135deg, #14141C, #0B0B09);
+    padding: 24px;
+    z-index: 3;
+  }
+  .empty-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #fff;
+  }
+  .btn-ghost:hover {
+    background: rgba(255,255,255,0.1);
+    border-color: var(--highlight);
+    color: var(--highlight);
+  }
+  .btn-upload {
+    background: var(--highlight);
+    color: var(--ink);
+    border-color: var(--highlight);
+    font-weight: 600;
+  }
+  .btn-upload:hover {
+    background: #e8b835;
+    border-color: #e8b835;
+  }
+
+  /* drop-overlay: shown during drag-over */
+  .drop-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(14, 74, 56, 0.92);
+    backdrop-filter: blur(6px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 20;
+    pointer-events: none;
+    border: 3px dashed var(--highlight);
+  }
+  .drop-overlay.show { display: flex; animation: dropPop 0.2s; }
+  @keyframes dropPop {
+    from { opacity: 0; transform: scale(0.96); }
+    to   { opacity: 1; transform: scale(1); }
+  }
+  .drop-inner {
+    text-align: center;
+    color: #fff;
+  }
+  .drop-icon {
+    font-family: 'Fraunces', serif;
+    font-size: 80px;
+    line-height: 1;
+    color: var(--highlight);
+    margin-bottom: 12px;
+    animation: bounce 1.2s ease-in-out infinite;
+  }
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(10px); }
+  }
+  .drop-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 32px;
+    letter-spacing: -0.02em;
+    margin-bottom: 6px;
+  }
+  .drop-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.65);
+  }
+
+  /* When uploaded image is shown, hide video + viewfinder */
+  .cam-stage.has-upload video { display: none; }
+  .cam-stage.has-upload .viewfinder { display: none; }
+  .cam-stage.has-upload canvas#snapshot {
+    opacity: 1 !important;
+    z-index: 2;
+    object-fit: contain;
+    background: #0B0B09;
+  }
+  .cam-stage.has-upload .cam-hud,
+  .cam-stage.has-upload .cam-hud-right { display: none !important; }
+
+  /* uploaded image badge */
+  .upload-badge {
+    position: absolute;
+    top: 16px; left: 16px;
+    background: var(--highlight);
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    font-weight: 700;
+    padding: 8px 12px;
+    border-radius: 2px;
+    z-index: 4;
+    display: none;
+    align-items: center;
+    gap: 8px;
+  }
+  .upload-badge.show { display: inline-flex; }
+  .upload-badge::before {
+    content: '◆';
+    font-family: 'Fraunces', serif;
+  }
+  .upload-clear {
+    background: var(--ink);
+    color: var(--highlight);
+    border: none;
+    padding: 4px 9px;
+    margin-left: 4px;
+    cursor: pointer;
+    border-radius: 2px;
+    font-family: inherit;
+    font-size: inherit;
+    letter-spacing: inherit;
+  }
+  .upload-clear:hover { background: var(--accent); color: #fff; }
+  .cam-empty .icon {
+    font-family: 'Fraunces', serif;
+    font-size: 64px;
+    color: var(--highlight);
+    margin-bottom: 18px;
+  }
+  .cam-empty h3 {
+    font-family: 'Fraunces', serif;
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    color: #fff;
+  }
+  .cam-empty p {
+    max-width: 380px;
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+
+  /* control bar */
+  .cam-controls {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 16px;
+    align-items: center;
+    padding: 24px;
+    background: var(--surface);
+  }
+  .ctrl-left, .ctrl-right {
+    display: flex;
+    gap: 10px;
+  }
+  .ctrl-right { justify-content: flex-end; }
+
+  .btn {
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans Thai', sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+    padding: 11px 18px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: all 0.18s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn:hover { background: var(--bg-deep); transform: translateY(-1px); }
+  .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+  .btn-icon {
+    width: 16px; height: 16px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2;
+  }
+
+  .btn-capture {
+    background: var(--primary);
+    color: var(--surface);
+    border: none;
+    padding: 0;
+    width: 96px; height: 96px;
+    border-radius: 50%;
+    position: relative;
+    font-family: 'Fraunces', serif;
+    font-weight: 800;
+    font-size: 13px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 8px 0 var(--primary-deep), 0 14px 28px rgba(14, 74, 56, 0.28);
+  }
+  .btn-capture::before {
+    content: '';
+    position: absolute;
+    inset: 8px;
+    border: 2px solid var(--highlight);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .btn-capture:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 11px 0 var(--primary-deep), 0 20px 36px rgba(14, 74, 56, 0.32);
+  }
+  .btn-capture:active {
+    transform: translateY(4px);
+    box-shadow: 0 4px 0 var(--primary-deep), 0 6px 12px rgba(14, 74, 56, 0.24);
+  }
+  .btn-capture:disabled {
+    background: var(--muted);
+    box-shadow: 0 6px 0 #4a463e, 0 8px 16px rgba(0,0,0,0.1);
+    cursor: not-allowed;
+  }
+
+  /* selects */
+  .select {
+    appearance: none;
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans Thai', sans-serif;
+    font-size: 12px;
+    padding: 10px 32px 10px 14px;
+    border-radius: 2px;
+    cursor: pointer;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'><path d='M1 1l4 4 4-4' stroke='%23131311' fill='none' stroke-width='1.5'/></svg>");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+  }
+
+  /* ---------- RIGHT COLUMN ---------- */
+  .right-col {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    min-width: 0;
+  }
+
+  /* Status / progress card */
+  .status-card {
+    background: var(--ink);
+    color: var(--bg);
+    padding: 24px 26px;
+    border-radius: 4px;
+    position: relative;
+    overflow: hidden;
+  }
+  .status-card::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 160px; height: 160px;
+    background: var(--accent);
+    border-radius: 50%;
+    opacity: 0.16;
+    filter: blur(10px);
+  }
+  .status-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--highlight);
+    display: flex;
+    justify-content: space-between;
+  }
+  .status-eyebrow .clock {
+    color: rgba(255,255,255,0.6);
+  }
+  .status-message {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 26px;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin-top: 10px;
+    min-height: 60px;
+  }
+  .status-message em {
+    color: var(--highlight);
+    font-style: italic;
+  }
+  .progress-track {
+    height: 4px;
+    background: rgba(255,255,255,0.15);
+    margin-top: 16px;
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .progress-bar {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--highlight), var(--accent));
+    transition: width 0.3s;
+  }
+  .progress-meta {
+    margin-top: 10px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: rgba(255,255,255,0.7);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* Results card */
+  .result-body {
+    padding: 24px;
+  }
+  .result-empty {
+    padding: 48px 24px;
+    text-align: center;
+    color: var(--muted);
+  }
+  .result-empty .big {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 36px;
+    color: var(--ink-soft);
+    margin-bottom: 8px;
+  }
+
+  .field {
+    padding: 14px 0;
+    border-bottom: 1px dashed var(--line);
+    display: grid;
+    grid-template-columns: 110px 1fr;
+    gap: 16px;
+    align-items: baseline;
+  }
+  .field:last-child { border-bottom: 0; }
+  .field-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding-top: 2px;
+  }
+  .field-value {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 20px;
+    line-height: 1.25;
+    color: var(--ink);
+    word-break: break-word;
+  }
+  .field-value.dim {
+    color: var(--muted);
+    font-style: italic;
+    font-weight: 400;
+    font-size: 16px;
+  }
+  .field-value.mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 500;
+    font-size: 14px;
+  }
+  .field-value.accent {
+    color: var(--accent);
+  }
+
+  .raw-text {
+    margin-top: 22px;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 16px;
+    max-height: 220px;
+    overflow-y: auto;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--ink-soft);
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .raw-text-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 22px 0 8px;
+  }
+  .raw-text-head h4 {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .conf-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 2px;
+    background: var(--bg-deep);
+    color: var(--ink);
+  }
+  .conf-badge.high { background: rgba(46, 125, 79, 0.18); color: var(--success); }
+  .conf-badge.mid  { background: rgba(244, 197, 67, 0.25); color: #8a6b00; }
+  .conf-badge.low  { background: rgba(184, 46, 27, 0.18); color: var(--danger); }
+
+  .result-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 22px;
+    flex-wrap: wrap;
+  }
+  .btn-primary {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: #d44e1d; border-color: #d44e1d; }
+
+  /* History */
+  .history-list {
+    padding: 8px 0;
+  }
+  .history-empty {
+    padding: 40px 24px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+    font-style: italic;
+  }
+  .history-item {
+    display: grid;
+    grid-template-columns: 56px 1fr auto;
+    gap: 14px;
+    align-items: center;
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--line);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .history-item:hover { background: var(--bg-deep); }
+  .history-item:last-child { border-bottom: 0; }
+  .hist-num {
+    font-family: 'Fraunces', serif;
+    font-weight: 900;
+    font-size: 36px;
+    line-height: 1;
+    color: var(--primary);
+    font-style: italic;
+  }
+  .hist-name {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 17px;
+    line-height: 1.2;
+    color: var(--ink);
+  }
+  .hist-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 3px;
+  }
+  .hist-time {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* ---------- BOTTOM TIPS STRIP ---------- */
+  .tips-strip {
+    max-width: 1480px;
+    margin: 0 auto;
+    padding: 32px;
+    border-top: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+  }
+  .tip {
+    display: flex;
+    gap: 14px;
+  }
+  .tip-num {
+    font-family: 'Fraunces', serif;
+    font-weight: 800;
+    font-size: 14px;
+    color: var(--accent);
+    border-top: 2px solid var(--accent);
+    padding-top: 8px;
+    width: 36px;
+    flex-shrink: 0;
+  }
+  .tip-content h5 {
+    font-family: 'IBM Plex Sans Thai', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+  .tip-content p {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.5;
+  }
+
+  /* footer */
+  footer {
+    border-top: 1px solid var(--line);
+    background: var(--ink);
+    color: rgba(255,255,255,0.65);
+    padding: 24px 32px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .footer-inner {
+    max-width: 1480px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  footer span.dim { color: rgba(255,255,255,0.4); }
+
+  /* toast */
+  .toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--ink);
+    color: var(--bg);
+    padding: 14px 22px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 100;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+    border-left: 3px solid var(--accent);
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* responsive */
+  @media (max-width: 1100px) {
+    .hero-num { font-size: 130px; }
+    .hero-title { font-size: 42px; }
+    .main { grid-template-columns: 1fr; }
+    .hero { grid-template-columns: auto 1fr; }
+    .hero-meta { display: none; }
+  }
+  @media (max-width: 720px) {
+    .topbar-inner { grid-template-columns: 1fr auto; gap: 12px; padding: 14px 18px;}
+    .topnav { display: none; }
+    .hero { padding: 32px 18px 20px; gap: 20px; grid-template-columns: 1fr; }
+    .hero-num { font-size: 96px; }
+    .hero-title { font-size: 30px; }
+    .main { padding: 24px 18px 40px; gap: 22px; }
+    .tips-strip { grid-template-columns: 1fr 1fr; padding: 24px 18px; }
+    .cam-controls { grid-template-columns: 1fr; gap: 12px; }
+    .ctrl-left, .ctrl-right { justify-content: center; flex-wrap: wrap; }
+    .field { grid-template-columns: 1fr; gap: 4px; }
+  }
+
+  /* a11y */
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0;
+    margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0;
+  }
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+  }
+
+  /* ---------- AI CHAT ---------- */
+  .chat-card {
+    display: flex;
+    flex-direction: column;
+  }
+  .chat-suggestions {
+    padding: 14px 20px 4px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    border-bottom: 1px solid var(--line);
+  }
+  .chip {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    font-family: 'IBM Plex Sans Thai', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    padding: 7px 12px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-bottom: 6px;
+    line-height: 1.2;
+  }
+  .chip:hover {
+    background: var(--ink);
+    color: var(--highlight);
+    border-color: var(--ink);
+    transform: translateY(-1px);
+  }
+  .chip:active { transform: translateY(0); }
+
+  .chat-messages {
+    padding: 18px 20px;
+    max-height: 480px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: linear-gradient(180deg, var(--bg), var(--surface) 30px);
+    scroll-behavior: smooth;
+  }
+  .chat-messages:empty {
+    padding: 28px 20px;
+    text-align: center;
+    color: var(--muted);
+    font-style: italic;
+    font-size: 13px;
+  }
+  .chat-messages:empty::before {
+    content: 'เริ่มถามได้เลย — กดปุ่มด้านบนหรือพิมพ์/พูดคำถามด้านล่าง';
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 15px;
+    color: var(--ink-soft);
+  }
+
+  .msg {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    max-width: 92%;
+    animation: msgIn 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes msgIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .msg.user {
+    align-self: flex-end;
+    flex-direction: row-reverse;
+  }
+  .msg-avatar {
+    width: 30px; height: 30px;
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 13px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .msg.ai .msg-avatar {
+    background: var(--primary);
+    color: var(--highlight);
+  }
+  .msg.user .msg-avatar {
+    background: var(--accent);
+    color: #fff;
+  }
+  .msg-bubble {
+    padding: 12px 16px;
+    border-radius: 14px;
+    font-size: 14.5px;
+    line-height: 1.6;
+    color: var(--ink);
+    word-break: break-word;
+  }
+  .msg.ai .msg-bubble {
+    background: var(--bg-deep);
+    border-bottom-left-radius: 4px;
+  }
+  .msg.user .msg-bubble {
+    background: var(--ink);
+    color: var(--bg);
+    border-bottom-right-radius: 4px;
+  }
+  .msg-bubble.thinking {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+  }
+  .msg-bubble.thinking i {
+    width: 6px; height: 6px;
+    background: var(--muted);
+    border-radius: 50%;
+    animation: dot 1.2s infinite ease-in-out;
+  }
+  .msg-bubble.thinking i:nth-child(2) { animation-delay: 0.15s; }
+  .msg-bubble.thinking i:nth-child(3) { animation-delay: 0.3s; }
+  @keyframes dot {
+    0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+    40%           { opacity: 1; transform: scale(1.1); }
+  }
+  .msg-bubble strong { color: var(--accent); font-weight: 700; }
+  .msg .speak-mini {
+    margin-top: 6px;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--muted);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 4px 9px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .msg .speak-mini:hover { background: var(--ink); color: var(--highlight); border-color: var(--ink); }
+
+  .chat-input-wrap {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 8px;
+    padding: 14px 20px 20px;
+    background: var(--surface);
+    border-top: 1px solid var(--line);
+    align-items: center;
+  }
+  .chat-input {
+    background: var(--bg);
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 12px 18px;
+    font-family: 'IBM Plex Sans Thai', sans-serif;
+    font-size: 14.5px;
+    color: var(--ink);
+    transition: all 0.15s;
+  }
+  .chat-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: var(--surface);
+    box-shadow: 0 0 0 3px rgba(232, 93, 42, 0.12);
+  }
+  .btn-mic, .btn-send {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    transition: all 0.18s;
+    flex-shrink: 0;
+  }
+  .btn-mic svg, .btn-send svg { width: 18px; height: 18px; }
+  .btn-mic {
+    background: var(--bg-deep);
+    color: var(--ink);
+    border: 1px solid var(--line-strong);
+  }
+  .btn-mic:hover { background: var(--ink); color: var(--highlight); border-color: var(--ink); }
+  .btn-mic.recording {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    animation: pulseMic 1.2s infinite;
+  }
+  @keyframes pulseMic {
+    0%   { box-shadow: 0 0 0 0 rgba(232, 93, 42, 0.6); }
+    70%  { box-shadow: 0 0 0 14px rgba(232, 93, 42, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(232, 93, 42, 0); }
+  }
+  .btn-send {
+    background: var(--primary);
+    color: var(--surface);
+    box-shadow: 0 3px 0 var(--primary-deep);
+  }
+  .btn-send:hover { background: var(--primary-deep); transform: translateY(-1px); box-shadow: 0 4px 0 var(--primary-deep); }
+  .btn-send:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--primary-deep); }
+  .btn-send:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  /* ---------- SETTINGS BUTTON ---------- */
+  .btn-settings {
+    margin-left: 6px;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 12px;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink);
+    transition: all 0.18s;
+  }
+  .btn-settings:hover { background: var(--bg-deep); border-color: var(--ink); }
+  .btn-settings .key-state {
+    padding: 2px 8px;
+    background: var(--danger);
+    color: #fff;
+    border-radius: 999px;
+    font-size: 9px;
+    letter-spacing: 0.06em;
+  }
+  .btn-settings.ready .key-state {
+    background: var(--success);
+  }
+
+  /* ---------- MODAL ---------- */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(11, 11, 9, 0.55);
+    backdrop-filter: blur(6px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 200;
+    padding: 24px;
+  }
+  .modal-backdrop.open { display: flex; animation: fadeIn 0.2s; }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  .modal {
+    background: var(--surface);
+    border-radius: 4px;
+    max-width: 560px;
+    width: 100%;
+    max-height: 92vh;
+    overflow-y: auto;
+    border: 1px solid var(--line-strong);
+    box-shadow: 0 24px 80px rgba(0,0,0,0.3);
+    animation: pop 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes pop {
+    from { transform: scale(0.92) translateY(20px); opacity: 0; }
+    to   { transform: scale(1) translateY(0); opacity: 1; }
+  }
+  .modal-head {
+    padding: 24px 28px 18px;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg-deep);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .modal-head .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .modal-head h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 26px;
+    letter-spacing: -0.02em;
+    margin-top: 4px;
+    line-height: 1.15;
+  }
+  .modal-head h2 em { font-style: italic; color: var(--accent); }
+  .modal-close {
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: grid;
+    place-items: center;
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    color: var(--ink);
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .modal-close:hover { background: var(--ink); color: var(--bg); }
+  .modal-body {
+    padding: 24px 28px 28px;
+  }
+  .modal-body p {
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    line-height: 1.65;
+    margin-bottom: 16px;
+  }
+  .modal-body ol {
+    background: var(--bg);
+    border-left: 3px solid var(--accent);
+    padding: 16px 20px 16px 38px;
+    font-size: 13px;
+    color: var(--ink-soft);
+    line-height: 1.7;
+    border-radius: 2px;
+    margin-bottom: 20px;
+  }
+  .modal-body ol li::marker {
+    color: var(--accent);
+    font-weight: 700;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .modal-body ol a {
+    color: var(--primary);
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-thickness: 1px;
+    text-underline-offset: 3px;
+  }
+  .form-label {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .form-input {
+    width: 100%;
+    border: 1px solid var(--line-strong);
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    padding: 12px 14px;
+    border-radius: 2px;
+    transition: border-color 0.15s;
+  }
+  .form-input:focus {
+    outline: none;
+    border-color: var(--accent);
+    background: var(--surface);
+  }
+  .form-input-row {
+    display: flex; gap: 8px;
+  }
+  .form-input-row .form-input { flex: 1; }
+  .btn-toggle {
+    width: 46px;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: 2px;
+    cursor: pointer;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+  }
+  .btn-toggle:hover { background: var(--bg-deep); }
+
+  .model-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 14px;
+  }
+  .model-opt {
+    border: 1px solid var(--line-strong);
+    background: var(--surface);
+    padding: 12px 14px;
+    border-radius: 2px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.15s;
+  }
+  .model-opt:hover { background: var(--bg-deep); }
+  .model-opt.active {
+    background: var(--ink);
+    color: var(--bg);
+    border-color: var(--ink);
+  }
+  .model-opt strong {
+    display: block;
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 15px;
+    margin-bottom: 2px;
+  }
+  .model-opt span {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .model-opt.active span { color: var(--highlight); }
+
+  .modal-foot {
+    margin-top: 22px;
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+  }
+  .privacy-note {
+    margin-top: 18px;
+    padding: 12px 14px;
+    background: rgba(244, 197, 67, 0.18);
+    border-left: 3px solid var(--highlight);
+    font-size: 12px;
+    line-height: 1.55;
+    color: var(--ink-soft);
+    border-radius: 2px;
+  }
+  .privacy-note strong { color: var(--ink); }
+</style>
+</head>
+<body>
+
+<!-- ============ TOP BAR ============ -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="brand-mark"><span>R</span></div>
+      <div class="brand-text">
+        <div class="brand-name">ScanRx<span style="color:var(--accent)">·</span></div>
+        <div class="brand-tag">Medicine Label Reader · v1.0</div>
+      </div>
+    </div>
+    <nav class="topnav" aria-label="หลัก">
+      <a href="#" class="active">สแกน</a>
+      <a href="#history">ประวัติ</a>
+      <a href="#tips">วิธีใช้งาน</a>
+      <a href="api-key-guide.html">คู่มือ API Key ↗</a>
+    </nav>
+    <div class="top-status">
+      <span class="status-dot" id="camStatusDot"></span>
+      <span id="camStatusText">กล้องยังไม่เปิด</span>
+      <button class="btn-settings" id="openSettingsBtn" aria-label="ตั้งค่า API">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        <span>API Key</span>
+        <span class="key-state" id="keyState">ยังไม่ตั้ง</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="hero-num serif">01<em>.</em></div>
+  <div>
+    <h1 class="hero-title">
+      อ่านฉลากยา<br>
+      <em>ด้วยกล้องและ AI.</em>
+    </h1>
+    <p class="hero-sub">
+      เปิดกล้องส่องฉลาก หรืออัพโหลดรูปที่ถ่ายไว้ก็ได้ —
+      Gemini AI จะอ่านชื่อยา · ขนาด · วิธีใช้ · สรรพคุณ · คำเตือน · เลข อย. · QR Code
+      พร้อม<strong>อ่านออกเสียงให้ฟังเป็นภาษาไทย</strong>อัตโนมัติ
+    </p>
+  </div>
+  <div class="hero-meta">
+    เครื่องมือ · AI VISION
+    <strong>Google Gemini 2.0 Flash</strong>
+    <br>
+    รองรับ
+    <strong>ไทย · อังกฤษ · 30+ ภาษา</strong>
+  </div>
+</section>
+
+<!-- ============ MAIN GRID ============ -->
+<main class="main">
+
+  <!-- ===== CAMERA ===== -->
+  <section class="card cam-card" aria-labelledby="camTitle">
+    <div class="card-header">
+      <div>
+        <div class="card-eyebrow">LIVE · <b>กล้องสแกน</b></div>
+        <div class="card-title" id="camTitle">เลนส์อ่านฉลาก</div>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center;">
+        <select id="cameraSelect" class="select" aria-label="เลือกกล้อง">
+          <option>กำลังโหลดกล้อง…</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="cam-stage" id="camStage">
+      <video id="video" autoplay playsinline muted></video>
+      <canvas id="snapshot"></canvas>
+
+      <div class="viewfinder">
+        <div class="vf-frame">
+          <span class="vf-label">SCAN AREA</span>
+          <div class="vf-corner tl"></div>
+          <div class="vf-corner tr"></div>
+          <div class="vf-corner bl"></div>
+          <div class="vf-corner br"></div>
+          <div class="vf-scanline"></div>
+        </div>
+      </div>
+
+      <div class="cam-hud" id="camHud" style="display:none;">
+        <span class="hud-chip rec">LIVE</span>
+        <span class="hud-chip" id="resChip">— × —</span>
+      </div>
+      <div class="cam-hud-right" id="camHudRight" style="display:none;">
+        <span class="hud-chip" id="fpsChip">FPS —</span>
+      </div>
+
+      <div class="cam-empty" id="camEmpty">
+        <div class="icon">◉</div>
+        <h3>เริ่มสแกนฉลากยา</h3>
+        <p>เปิดกล้องเพื่อสแกนสด หรือ <strong>อัพโหลดรูป / ลากวาง / วาง (Ctrl+V)</strong> รูปฉลากยาที่ถ่ายไว้ได้เลย — Gemini AI จะอ่านให้ทันที</p>
+        <div class="empty-actions">
+          <button class="btn btn-primary" id="startCamBtnEmpty">
+            <svg class="btn-icon" viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+            เปิดกล้อง
+          </button>
+          <button class="btn btn-ghost" id="uploadBtnEmpty">
+            <svg class="btn-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            เลือกรูปจากเครื่อง
+          </button>
+        </div>
+      </div>
+
+      <!-- Drag-and-drop overlay -->
+      <div class="drop-overlay" id="dropOverlay">
+        <div class="drop-inner">
+          <div class="drop-icon">⬇</div>
+          <div class="drop-title">วางรูปฉลากยาที่นี่</div>
+          <div class="drop-sub">รองรับไฟล์ JPG / PNG / WebP / HEIC</div>
+        </div>
+      </div>
+
+      <!-- Uploaded image badge -->
+      <div class="upload-badge" id="uploadBadge">
+        <span>โหมดรูปภาพ</span>
+        <button class="upload-clear" id="clearUploadBtn">×&nbsp;ล้าง</button>
+      </div>
+    </div>
+
+    <div class="cam-controls">
+      <div class="ctrl-left">
+        <button class="btn" id="startCamBtn">
+          <svg class="btn-icon" viewBox="0 0 24 24"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+          เปิดกล้อง
+        </button>
+        <button class="btn btn-upload" id="uploadBtn">
+          <svg class="btn-icon" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          อัพโหลดรูป
+        </button>
+        <button class="btn" id="stopCamBtn" disabled>
+          <svg class="btn-icon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+          หยุด
+        </button>
+        <input type="file" id="fileInput" accept="image/*" style="display:none;" />
+      </div>
+
+      <button class="btn-capture" id="captureBtn" disabled aria-label="สแกนฉลากยา">
+        SCAN<br>NOW
+      </button>
+
+      <div class="ctrl-right">
+        <button class="btn" id="speakBtn" disabled>
+          <svg class="btn-icon" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.54 8.46a5 5 0 010 7.07"/></svg>
+          อ่านออกเสียง
+        </button>
+        <button class="btn" id="resetBtn">
+          <svg class="btn-icon" viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/></svg>
+          เริ่มใหม่
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===== RIGHT COLUMN ===== -->
+  <aside class="right-col">
+
+    <!-- Live status -->
+    <div class="status-card">
+      <div class="status-eyebrow">
+        <span>STATUS · 02</span>
+        <span class="clock" id="clock">--:--:--</span>
+      </div>
+      <div class="status-message" id="statusMessage">
+        พร้อมเปิดกล้องและ<em>เริ่มสแกน</em>
+      </div>
+      <div class="progress-track">
+        <div class="progress-bar" id="progressBar"></div>
+      </div>
+      <div class="progress-meta">
+        <span id="progressLabel">รอคำสั่ง</span>
+        <span id="progressPct">0%</span>
+      </div>
+    </div>
+
+    <!-- Result -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-eyebrow">RESULT · <b>ผลการอ่าน</b></div>
+          <div class="card-title">ฉลากยาล่าสุด</div>
+        </div>
+        <span class="conf-badge" id="confBadge" style="display:none;">— %</span>
+      </div>
+
+      <div id="resultEmpty" class="result-empty">
+        <div class="big serif">ยังไม่มีข้อมูล</div>
+        <p>กดปุ่ม <strong>SCAN NOW</strong> เพื่อสแกนฉลากยาที่อยู่หน้ากล้อง</p>
+      </div>
+
+      <div id="resultBody" class="result-body" style="display:none;">
+        <div class="field">
+          <div class="field-label">ชื่อยา</div>
+          <div class="field-value" id="fName">—</div>
+        </div>
+        <div class="field">
+          <div class="field-label">ชื่อสามัญ</div>
+          <div class="field-value" id="fGeneric">—</div>
+        </div>
+        <div class="field">
+          <div class="field-label">ขนาด · รูปแบบ</div>
+          <div class="field-value mono" id="fDose">—</div>
+        </div>
+        <div class="field">
+          <div class="field-label">วิธีใช้</div>
+          <div class="field-value" id="fUsage">—</div>
+        </div>
+        <div class="field">
+          <div class="field-label">สรรพคุณ</div>
+          <div class="field-value" id="fIndication">—</div>
+        </div>
+        <div class="field">
+          <div class="field-label">คำเตือน</div>
+          <div class="field-value" id="fWarning" style="color:var(--danger);">—</div>
+        </div>
+        <div class="field">
+          <div class="field-label">วิธีเก็บ</div>
+          <div class="field-value" id="fStorage">—</div>
+        </div>
+        <div class="field">
+          <div class="field-label">วันหมดอายุ</div>
+          <div class="field-value mono accent" id="fExpiry">—</div>
+        </div>
+        <div class="field">
+          <div class="field-label">วันผลิต</div>
+          <div class="field-value mono" id="fMfg">—</div>
+        </div>
+        <div class="field">
+          <div class="field-label">เลขที่ผลิต</div>
+          <div class="field-value mono" id="fLot">—</div>
+        </div>
+        <div class="field">
+          <div class="field-label">เลข อย.</div>
+          <div class="field-value mono" id="fReg">—</div>
+        </div>
+        <div class="field">
+          <div class="field-label">Barcode</div>
+          <div class="field-value mono" id="fBarcode">—</div>
+        </div>
+        <div class="field">
+          <div class="field-label">QR Code</div>
+          <div class="field-value" id="fQr">—</div>
+        </div>
+        <div class="field">
+          <div class="field-label">ตัวเลขอื่น</div>
+          <div class="field-value" id="fNumbers" style="font-family: 'JetBrains Mono', monospace; font-size: 13px;">—</div>
+        </div>
+        <div class="field">
+          <div class="field-label">ผู้ผลิต</div>
+          <div class="field-value" id="fManu">—</div>
+        </div>
+
+        <div class="raw-text-head">
+          <h4>RAW · ข้อความที่อ่านได้ทั้งหมด</h4>
+        </div>
+        <pre class="raw-text" id="rawText"></pre>
+
+        <div class="result-actions">
+          <button class="btn btn-primary" id="speakResultBtn">
+            <svg class="btn-icon" viewBox="0 0 24 24"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M19.07 4.93a10 10 0 010 14.14"/></svg>
+            อ่านออกเสียง
+          </button>
+          <button class="btn" id="copyBtn">
+            <svg class="btn-icon" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            คัดลอกข้อความ
+          </button>
+          <button class="btn" id="saveBtn">
+            <svg class="btn-icon" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+            บันทึก
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AI Chat -->
+    <div class="card chat-card" id="chatCard" style="display:none;">
+      <div class="card-header">
+        <div>
+          <div class="card-eyebrow">CHAT · <b>ถาม AI ต่อ</b></div>
+          <div class="card-title">ปรึกษาเภสัชกร AI</div>
+        </div>
+        <button class="btn" id="clearChatBtn" style="padding:6px 12px; font-size:11px;">ล้างแชต</button>
+      </div>
+
+      <div class="chat-suggestions" id="chatSuggestions">
+        <button class="chip" data-q="ผลข้างเคียงของยานี้คืออะไรบ้าง?">⚠ ผลข้างเคียง</button>
+        <button class="chip" data-q="ยานี้ทานก่อนหรือหลังอาหาร?">🍚 ก่อน/หลังอาหาร</button>
+        <button class="chip" data-q="ถ้าลืมทานยาตามเวลา ต้องทำยังไง?">⏰ ลืมทาน</button>
+        <button class="chip" data-q="ยานี้ห้ามทานพร้อมอะไรบ้าง? เช่น กาแฟ แอลกอฮอล์ ยาอื่นๆ">🚫 ห้ามทานพร้อม</button>
+        <button class="chip" data-q="ใครห้ามใช้ยานี้บ้าง? เช่น คนท้อง คนแพ้ยา ผู้ป่วยโรคอะไร">👤 ห้ามใช้กับใคร</button>
+        <button class="chip" data-q="ยานี้สามารถทานติดต่อกันได้นานแค่ไหน?">📅 ทานนานแค่ไหน</button>
+        <button class="chip" data-q="ถ้าทานเกินขนาดจะเป็นอะไรไหม?">⚡ ทานเกินขนาด</button>
+        <button class="chip" data-q="เก็บยานี้ยังไงให้ถูกต้อง?">🌡️ วิธีเก็บ</button>
+      </div>
+
+      <div class="chat-messages" id="chatMessages"></div>
+
+      <div class="chat-input-wrap">
+        <button class="btn-mic" id="micBtn" aria-label="กดพูดเพื่อถาม" title="กดพูดเพื่อถาม">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+        </button>
+        <input type="text" id="chatInput" class="chat-input" placeholder="พิมพ์คำถาม หรือกดไมค์พูด…" autocomplete="off" />
+        <button class="btn-send" id="sendBtn" aria-label="ส่งคำถาม">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- History -->
+    <div class="card" id="history">
+      <div class="card-header">
+        <div>
+          <div class="card-eyebrow">LOG · <b>ประวัติการสแกน</b></div>
+          <div class="card-title">รายการล่าสุด</div>
+        </div>
+        <button class="btn" id="clearHistBtn" style="padding:6px 12px; font-size:11px;">ล้างทั้งหมด</button>
+      </div>
+      <div class="history-list" id="historyList">
+        <div class="history-empty">ยังไม่มีประวัติ · เริ่มสแกนเพื่อบันทึก</div>
+      </div>
+    </div>
+
+  </aside>
+
+</main>
+
+<!-- ============ TIPS STRIP ============ -->
+<section class="tips-strip" id="tips">
+  <div class="tip">
+    <div class="tip-num">01</div>
+    <div class="tip-content">
+      <h5>กล้องสดหรือรูปก็ได้</h5>
+      <p>เปิดกล้องสแกนทันที หรืออัพโหลด/ลากวาง/วาง (Ctrl+V) รูปฉลากยาเข้ามาได้</p>
+    </div>
+  </div>
+  <div class="tip">
+    <div class="tip-num">02</div>
+    <div class="tip-content">
+      <h5>แสงสว่างต้องพอ</h5>
+      <p>ใช้ในที่แสงสว่างเพียงพอ หลีกเลี่ยงเงาและแสงสะท้อนบนฉลาก</p>
+    </div>
+  </div>
+  <div class="tip">
+    <div class="tip-num">03</div>
+    <div class="tip-content">
+      <h5>ฉลากต้องชัด</h5>
+      <p>เช็ดฝุ่นและไอน้ำที่ฉลากออกก่อน เพื่อให้ตัวอักษรและ QR code อ่านได้ชัดเจน</p>
+    </div>
+  </div>
+  <div class="tip">
+    <div class="tip-num">04</div>
+    <div class="tip-content">
+      <h5>ฟังเสียงอ่าน</h5>
+      <p>หลังสแกนเสร็จ AI จะอ่านให้ฟังอัตโนมัติ — กดปุ่มอ่านซ้ำได้ตลอด</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="footer-inner">
+    <div>ScanRx · A.I. Medicine Reader <span class="dim">— สำหรับผู้พิการทางสายตา/ผู้สูงอายุ</span></div>
+    <div>OCR · Tesseract.js 5.x &nbsp;·&nbsp; <span class="dim">©2026</span></div>
+  </div>
+</footer>
+
+<!-- ============ API KEY MODAL ============ -->
+<div class="modal-backdrop" id="settingsModal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+  <div class="modal">
+    <div class="modal-head">
+      <div>
+        <div class="eyebrow">SETTINGS · 00</div>
+        <h2 id="settingsTitle">เชื่อมต่อ <em>Google Gemini</em></h2>
+      </div>
+      <button class="modal-close" id="closeSettingsBtn" aria-label="ปิด">×</button>
+    </div>
+    <div class="modal-body">
+      <p>
+        ScanRx ใช้ <strong>Google Gemini Vision API</strong> ในการอ่านฉลากยา
+        ต้องใส่ API key ก่อนเริ่มสแกน — สมัครฟรีได้ภายใน 1 นาที ไม่ต้องใช้บัตรเครดิต
+      </p>
+      <ol>
+        <li>เปิด <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">aistudio.google.com/app/apikey</a> · หรือ <a href="api-key-guide.html" target="_blank">ดูคู่มือทีละขั้น ↗</a></li>
+        <li>เข้าสู่ระบบด้วย Google Account แล้วกด <strong>"Create API key"</strong></li>
+        <li>คัดลอกคีย์ที่ขึ้นต้นด้วย <code class="mono">AIza...</code> มาวางช่องด้านล่าง</li>
+      </ol>
+
+      <label class="form-label" for="apiKeyInput">GEMINI API KEY</label>
+      <div class="form-input-row">
+        <input type="password" id="apiKeyInput" class="form-input" placeholder="AIzaSy..." autocomplete="off" spellcheck="false" />
+        <button class="btn-toggle" id="toggleKeyBtn" type="button">SHOW</button>
+      </div>
+
+      <label class="form-label" style="margin-top: 18px;">เลือกโมเดล</label>
+      <div class="model-grid">
+        <button class="model-opt active" data-model="gemini-2.0-flash">
+          <strong>Gemini 2.0 Flash</strong>
+          <span>เร็ว · แม่นยำ · แนะนำ</span>
+        </button>
+        <button class="model-opt" data-model="gemini-2.5-flash">
+          <strong>Gemini 2.5 Flash</strong>
+          <span>ใหม่ล่าสุด · ฉลาดที่สุด</span>
+        </button>
+      </div>
+
+      <div class="privacy-note">
+        <strong>ความปลอดภัย:</strong> API key เก็บไว้ใน localStorage ของเบราว์เซอร์คุณเท่านั้น
+        ไม่มีการส่งไปที่อื่นนอกจาก Google โดยตรง — สามารถลบได้ทุกเมื่อด้วยปุ่ม "ลบคีย์"
+      </div>
+
+      <div class="modal-foot">
+        <button class="btn" id="clearKeyBtn">ลบคีย์</button>
+        <button class="btn btn-primary" id="saveKeyBtn">บันทึกและเริ่มใช้งาน</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">บันทึกเรียบร้อย</div>
+
+<script>
+/* ========================================================
+   ScanRx — Medicine Label Reader
+   Real OCR via Tesseract.js (Thai + English)
+======================================================== */
+
+const $ = (sel) => document.querySelector(sel);
+const $$ = (sel) => document.querySelectorAll(sel);
+
+// ----- elements -----
+const video       = $('#video');
+const snapshot    = $('#snapshot');
+const camEmpty    = $('#camEmpty');
+const camStage    = $('#camStage');
+const camHud      = $('#camHud');
+const camHudRight = $('#camHudRight');
+const resChip     = $('#resChip');
+const fpsChip     = $('#fpsChip');
+const camStatusDot  = $('#camStatusDot');
+const camStatusText = $('#camStatusText');
+
+const startCamBtn      = $('#startCamBtn');
+const startCamBtnEmpty = $('#startCamBtnEmpty');
+const stopCamBtn       = $('#stopCamBtn');
+const captureBtn       = $('#captureBtn');
+const speakBtn         = $('#speakBtn');
+const resetBtn         = $('#resetBtn');
+const cameraSelect     = $('#cameraSelect');
+const uploadBtn        = $('#uploadBtn');
+const uploadBtnEmpty   = $('#uploadBtnEmpty');
+const fileInput        = $('#fileInput');
+const dropOverlay      = $('#dropOverlay');
+const uploadBadge      = $('#uploadBadge');
+const clearUploadBtn   = $('#clearUploadBtn');
+
+// chat
+const chatCard        = $('#chatCard');
+const chatSuggestions = $('#chatSuggestions');
+const chatMessages    = $('#chatMessages');
+const chatInput       = $('#chatInput');
+const sendBtn         = $('#sendBtn');
+const micBtn          = $('#micBtn');
+const clearChatBtn    = $('#clearChatBtn');
+
+const statusMessage = $('#statusMessage');
+const progressBar   = $('#progressBar');
+const progressLabel = $('#progressLabel');
+const progressPct   = $('#progressPct');
+
+const resultEmpty = $('#resultEmpty');
+const resultBody  = $('#resultBody');
+const confBadge   = $('#confBadge');
+const rawText     = $('#rawText');
+const fName       = $('#fName');
+const fGeneric    = $('#fGeneric');
+const fDose       = $('#fDose');
+const fUsage      = $('#fUsage');
+const fIndication = $('#fIndication');
+const fWarning    = $('#fWarning');
+const fStorage    = $('#fStorage');
+const fExpiry     = $('#fExpiry');
+const fMfg        = $('#fMfg');
+const fLot        = $('#fLot');
+const fReg        = $('#fReg');
+const fBarcode    = $('#fBarcode');
+const fQr         = $('#fQr');
+const fNumbers    = $('#fNumbers');
+const fManu       = $('#fManu');
+
+const speakResultBtn = $('#speakResultBtn');
+const copyBtn        = $('#copyBtn');
+const saveBtn        = $('#saveBtn');
+const clearHistBtn   = $('#clearHistBtn');
+const historyList    = $('#historyList');
+const toast          = $('#toast');
+const clockEl        = $('#clock');
+
+// settings modal
+const openSettingsBtn  = $('#openSettingsBtn');
+const closeSettingsBtn = $('#closeSettingsBtn');
+const settingsModal    = $('#settingsModal');
+const apiKeyInput      = $('#apiKeyInput');
+const toggleKeyBtn     = $('#toggleKeyBtn');
+const saveKeyBtn       = $('#saveKeyBtn');
+const clearKeyBtn      = $('#clearKeyBtn');
+const keyState         = $('#keyState');
+
+// ----- state -----
+// ⚠️ ห้ามฮาร์ดโค้ด API key ในไฟล์นี้! จะถูกอ่านได้ทุกคนที่เปิดดู source code
+// ผู้ใช้ต้องใส่คีย์ผ่านปุ่ม "API Key" มุมขวาบน — เก็บใน localStorage เท่านั้น
+const DEFAULT_API_KEY = '';
+
+let stream = null;
+let currentDeviceId = null;
+let apiKey = '';
+let model = 'gemini-2.0-flash';
+let lastResult = null;
+let history = [];
+let fpsTimer = null;
+let uploadMode = false;  // true when displaying an uploaded image instead of live camera
+let chatHistory = [];    // [{ role: 'user'|'model', text }]
+let speechRec = null;    // SpeechRecognition instance
+let isRecording = false;
+
+// ----- clock -----
+function tickClock() {
+  const d = new Date();
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mm = String(d.getMinutes()).padStart(2,'0');
+  const ss = String(d.getSeconds()).padStart(2,'0');
+  clockEl.textContent = `${hh}:${mm}:${ss}`;
+}
+setInterval(tickClock, 1000); tickClock();
+
+// ----- helpers -----
+function setStatus(htmlMsg, opts = {}) {
+  statusMessage.innerHTML = htmlMsg;
+  if (typeof opts.pct === 'number') {
+    progressBar.style.width = opts.pct + '%';
+    progressPct.textContent = Math.round(opts.pct) + '%';
+  }
+  if (opts.label) progressLabel.textContent = opts.label;
+}
+function showToast(msg) {
+  toast.textContent = msg;
+  toast.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => toast.classList.remove('show'), 2400);
+}
+function camLive(on) {
+  camStatusDot.classList.toggle('live', on);
+  camStatusText.textContent = on ? 'กล้องทำงานอยู่' : 'กล้องยังไม่เปิด';
+  camHud.style.display      = on ? 'flex' : 'none';
+  camHudRight.style.display = on ? 'flex' : 'none';
+  camEmpty.style.display    = on ? 'none' : 'grid';
+}
+
+// ----- list cameras -----
+async function listCameras() {
+  try {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const cams = devices.filter(d => d.kind === 'videoinput');
+    cameraSelect.innerHTML = '';
+    if (cams.length === 0) {
+      const opt = document.createElement('option');
+      opt.textContent = 'ไม่พบกล้อง';
+      cameraSelect.appendChild(opt);
+      return;
+    }
+    cams.forEach((cam, i) => {
+      const opt = document.createElement('option');
+      opt.value = cam.deviceId;
+      opt.textContent = cam.label || `กล้อง ${i+1}`;
+      cameraSelect.appendChild(opt);
+    });
+    if (currentDeviceId) cameraSelect.value = currentDeviceId;
+  } catch (e) { console.warn('enumerateDevices', e); }
+}
+
+// ----- camera start/stop -----
+async function startCamera(deviceId) {
+  try {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+
+    const constraints = {
+      audio: false,
+      video: deviceId
+        ? { deviceId: { exact: deviceId }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+        : { facingMode: { ideal: 'environment' }, width: { ideal: 1920 }, height: { ideal: 1080 } }
+    };
+    stream = await navigator.mediaDevices.getUserMedia(constraints);
+    video.srcObject = stream;
+    await video.play();
+
+    const track = stream.getVideoTracks()[0];
+    const s = track.getSettings();
+    currentDeviceId = s.deviceId || deviceId;
+    resChip.textContent = `${s.width || video.videoWidth} × ${s.height || video.videoHeight}`;
+
+    camLive(true);
+    startCamBtn.disabled = true;
+    stopCamBtn.disabled = false;
+    captureBtn.disabled = false;
+
+    setStatus('กล้องพร้อมแล้ว — วางฉลากยาให้อยู่<em>ในกรอบกลางจอ</em>', { pct: 12, label: 'พร้อมสแกน' });
+    listCameras();
+    startFpsMeter();
+  } catch (err) {
+    console.error(err);
+    setStatus('เปิดกล้องไม่ได้ — <em>กรุณาอนุญาต</em>การใช้งานกล้องในเบราว์เซอร์', { pct: 0, label: 'ผิดพลาด' });
+    showToast('เปิดกล้องไม่ได้: ' + (err.message || err.name));
+  }
+}
+
+function stopCamera() {
+  if (stream) stream.getTracks().forEach(t => t.stop());
+  stream = null;
+  video.srcObject = null;
+  camLive(false);
+  startCamBtn.disabled = false;
+  stopCamBtn.disabled = true;
+  captureBtn.disabled = true;
+  stopFpsMeter();
+  setStatus('หยุดกล้องแล้ว', { pct: 0, label: 'พร้อมเริ่มใหม่' });
+}
+
+// ----- FPS meter -----
+let frameCount = 0;
+function startFpsMeter() {
+  let last = performance.now();
+  function loop() {
+    frameCount++;
+    fpsTimer = requestAnimationFrame(loop);
+  }
+  fpsTimer = requestAnimationFrame(loop);
+  startFpsMeter._iv = setInterval(() => {
+    const now = performance.now();
+    const fps = Math.round((frameCount / (now - last)) * 1000);
+    fpsChip.textContent = `FPS ${fps}`;
+    frameCount = 0;
+    last = now;
+  }, 1000);
+}
+function stopFpsMeter() {
+  if (fpsTimer) cancelAnimationFrame(fpsTimer);
+  clearInterval(startFpsMeter._iv);
+  fpsChip.textContent = 'FPS —';
+}
+
+// ----- image preprocessing for better OCR -----
+function preprocess(canvas) {
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const d = img.data;
+  // grayscale + contrast boost + soft adaptive threshold
+  let sum = 0;
+  for (let i = 0; i < d.length; i += 4) {
+    const g = 0.299 * d[i] + 0.587 * d[i+1] + 0.114 * d[i+2];
+    d[i] = d[i+1] = d[i+2] = g;
+    sum += g;
+  }
+  const mean = sum / (d.length / 4);
+  for (let i = 0; i < d.length; i += 4) {
+    let g = d[i];
+    // contrast curve around mean
+    g = (g - mean) * 1.55 + mean;
+    g = Math.max(0, Math.min(255, g));
+    d[i] = d[i+1] = d[i+2] = g;
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+// ----- capture frame from camera -----
+// returns { canvas, qr } — QR is decoded from raw frame BEFORE preprocessing
+function captureFrame() {
+  const w = video.videoWidth;
+  const h = video.videoHeight;
+  if (!w || !h) return null;
+
+  // 1) full frame canvas for QR decode (QRs may sit outside scan box)
+  const fullCanvas = document.createElement('canvas');
+  fullCanvas.width = w;
+  fullCanvas.height = h;
+  const fctx = fullCanvas.getContext('2d', { willReadFrequently: true });
+  fctx.drawImage(video, 0, 0, w, h);
+  let qr = decodeQR(fullCanvas);
+
+  // 2) cropped scan area for Gemini (matches viewfinder: 78% × 56% centered)
+  const cropW = Math.round(w * 0.78);
+  const cropH = Math.round(h * 0.56);
+  const cropX = Math.round((w - cropW) / 2);
+  const cropY = Math.round((h - cropH) / 2);
+
+  const scale = 2;
+  snapshot.width  = cropW * scale;
+  snapshot.height = cropH * scale;
+  const ctx = snapshot.getContext('2d');
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(video, cropX, cropY, cropW, cropH, 0, 0, snapshot.width, snapshot.height);
+
+  if (!qr) qr = decodeQR(snapshot);
+  preprocess(snapshot);
+  return { canvas: snapshot, qr };
+}
+
+// ----- capture frame from uploaded image (full image, not cropped) -----
+// snapshot canvas already contains the image
+function captureFromUpload() {
+  if (!snapshot.width || !snapshot.height) return null;
+
+  // create a working copy because preprocess() destroys colors
+  const work = document.createElement('canvas');
+  work.width = snapshot.width;
+  work.height = snapshot.height;
+  const ctx = work.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(snapshot, 0, 0);
+
+  const qr = decodeQR(work);
+  preprocess(work);
+  return { canvas: work, qr };
+}
+
+// ----- load file/blob into snapshot canvas as upload -----
+async function loadImageIntoSnapshot(fileOrBlob) {
+  return new Promise((resolve, reject) => {
+    if (!fileOrBlob) return reject(new Error('no file'));
+    if (!/^image\//.test(fileOrBlob.type || '') && !fileOrBlob.type) {
+      // some clipboard items have no type; still try
+    }
+    if (fileOrBlob.type && !/^image\//.test(fileOrBlob.type)) {
+      return reject(new Error('ไฟล์นี้ไม่ใช่รูปภาพ (' + fileOrBlob.type + ')'));
+    }
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        // cap at 2048 max dim to keep API request manageable
+        const maxDim = 2048;
+        const scale = Math.min(1, maxDim / Math.max(img.naturalWidth, img.naturalHeight));
+        snapshot.width  = Math.round(img.naturalWidth  * scale);
+        snapshot.height = Math.round(img.naturalHeight * scale);
+        const ctx = snapshot.getContext('2d');
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, snapshot.width, snapshot.height);
+        resolve({ width: snapshot.width, height: snapshot.height });
+      };
+      img.onerror = () => reject(new Error('โหลดรูปไม่ได้ — ไฟล์อาจเสีย'));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error('อ่านไฟล์ไม่ได้'));
+    reader.readAsDataURL(fileOrBlob);
+  });
+}
+
+function enterUploadMode() {
+  uploadMode = true;
+  camStage.classList.add('has-upload');
+  snapshot.classList.add('show');
+  camEmpty.style.display = 'none';
+  uploadBadge.classList.add('show');
+  captureBtn.disabled = false;
+}
+
+function exitUploadMode() {
+  uploadMode = false;
+  camStage.classList.remove('has-upload');
+  snapshot.classList.remove('show');
+  uploadBadge.classList.remove('show');
+  // clear the canvas
+  const ctx = snapshot.getContext('2d');
+  ctx.clearRect(0, 0, snapshot.width, snapshot.height);
+  if (!stream) {
+    camEmpty.style.display = 'grid';
+    captureBtn.disabled = true;
+  }
+}
+
+async function handleUploadFile(file) {
+  if (!file) return;
+  if (file.type && !/^image\//.test(file.type)) {
+    showToast('กรุณาเลือกไฟล์รูปภาพเท่านั้น');
+    return;
+  }
+  try {
+    setStatus('กำลัง<em>โหลดรูป</em>…', { pct: 8, label: 'อัพโหลด' });
+    await loadImageIntoSnapshot(file);
+    enterUploadMode();
+    setStatus(`โหลดรูปแล้ว · ${snapshot.width}×${snapshot.height} px — <em>กำลังสแกน</em>…`, { pct: 25, label: 'พร้อมสแกน' });
+    showToast('โหลดรูปเรียบร้อย · กำลังสแกน…');
+    // auto-run scan
+    setTimeout(runScan, 300);
+  } catch (err) {
+    console.error(err);
+    setStatus('โหลดรูปไม่ได้ — <em>' + escapeHtml(err.message) + '</em>', { pct: 0, label: 'ผิดพลาด' });
+    showToast('โหลดรูปไม่ได้: ' + err.message);
+  }
+}
+
+// ----- Gemini Vision call -----
+const GEMINI_PROMPT = `คุณคือ AI ผู้ช่วยอ่านฉลากยาสำหรับผู้พิการทางสายตาและผู้สูงอายุชาวไทย
+
+ภารกิจ: ดูภาพฉลากยา/บรรจุภัณฑ์ยาที่ให้มา อ่านข้อความและ**ตัวเลขทุกตัว**บนฉลากให้ละเอียดที่สุด รวมถึงสังเกตว่ามี QR code, Barcode หรือไม่
+จงสกัดข้อมูลออกมาเป็น JSON ตาม schema นี้เท่านั้น:
+
+{
+  "name": ชื่อทางการค้า เช่น "Paracetamol", "Tylenol", "Tiffy" (string หรือ null),
+  "generic_name": ชื่อสามัญทางยา/ตัวยาสำคัญ เช่น "Paracetamol", "Amoxicillin" (string หรือ null),
+  "dose": ขนาด/ความแรง + รูปแบบยา เช่น "500 mg เม็ด", "250 mg แคปซูล", "5 mg/ml น้ำเชื่อม" (string หรือ null),
+  "usage": วิธีรับประทาน/ใช้ เช่น "รับประทานครั้งละ 1 เม็ด วันละ 2 ครั้ง หลังอาหาร" (string หรือ null),
+  "indication": สรรพคุณ/ใช้รักษาอะไร เช่น "แก้ปวด ลดไข้" (string หรือ null),
+  "warning": คำเตือน/ข้อควรระวังสำคัญ (string หรือ null),
+  "storage": วิธีเก็บรักษา (string หรือ null),
+  "expiry": วันหมดอายุ คัดลอกตัวเลข/รูปแบบที่เห็นบนฉลาก เช่น "EXP 12/2027", "31 DEC 2027" (string หรือ null),
+  "manufacture_date": วันที่ผลิต MFG/MFD ถ้ามี (string หรือ null),
+  "lot": เลข Lot/Batch/รุ่นการผลิต เช่น "Lot: A2451B" (string หรือ null),
+  "registration_no": เลขทะเบียน อย./Reg.No./Med Reg./ทะเบียนยาเลขที่ — รูปแบบไทยเช่น "1A 234/56" หรือ "Reg.No. 1A 12345/45" (string หรือ null),
+  "barcode_no": ตัวเลขใต้ barcode ถ้าอ่านได้ ปกติเป็นตัวเลข 8-13 หลัก (string หรือ null),
+  "manufacturer": ผู้ผลิต/บริษัท (string หรือ null),
+  "all_numbers": [ array ของตัวเลข/รหัสทั้งหมดที่เห็นบนฉลาก พร้อมป้ายกำกับสั้น เช่น "Lot A2451B", "EXP 12/27", "500mg", "Reg 1A 234/56" — เก็บให้ครบทุกตัว ] (string[]),
+  "has_qr": true ถ้าเห็น QR code บนฉลาก, false ถ้าไม่เห็น (boolean),
+  "qr_description": ถ้ามี QR ให้อธิบายตำแหน่ง/ขนาดสั้นๆ — อย่าเดา URL/เนื้อหาภายใน QR (string หรือ null),
+  "raw_text": ข้อความทั้งหมดที่อ่านได้จากฉลาก เก็บบรรทัดเดิม (string),
+  "confidence": ความมั่นใจในการอ่าน 0-100 (number),
+  "voice_summary": สรุปสำหรับอ่านออกเสียงให้ผู้สูงอายุ/ผู้พิการทางสายตาฟัง ภาษาไทย เป็นประโยคพูดธรรมชาติ สั้นกระชับ ไม่เกิน 3 ประโยค ครอบคลุม ชื่อยา + สรรพคุณ + วิธีใช้ + ข้อควรระวัง (string)
+}
+
+กฎเข้มงวด:
+1. **ตัวเลขทุกตัว**ที่เห็นบนฉลาก ต้องอ่านให้หมดและบรรจุใน "all_numbers" เช่น เลข Lot, EXP, MFG, ขนาดยา, เลข อย., barcode, จำนวน, ราคา ฯลฯ
+2. ถ้าฉลากภาษาไทยมีรูปแบบ "1A 12345/56" หรือ "Reg.No. xxx-xxxx-xx" → ต้องใส่ใน registration_no
+3. ถ้า field ไหนไม่เห็นชัด → null ห้ามแต่งเดา
+4. voice_summary ต้องเขียนแบบพูดธรรมชาติ ใช้คำเต็มภาษาไทย เช่น "ยานี้ชื่อ พาราเซตามอล ขนาด 500 มิลลิกรัม ใช้แก้ปวดลดไข้ รับประทานครั้งละ 1 ถึง 2 เม็ด ห่างกันอย่างน้อย 4 ชั่วโมง" — ห้ามใช้เครื่องหมาย / หรือคำย่อ
+5. ตอบเป็น JSON เท่านั้น — ห้ามมี \`\`\`json หรือคำอธิบายภายนอก JSON`;
+
+// ----- QR decode (jsQR on raw frame, before preprocess) -----
+function decodeQR(canvas) {
+  try {
+    if (typeof jsQR === 'undefined') return null;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const result = jsQR(imgData.data, canvas.width, canvas.height, {
+      inversionAttempts: 'attemptBoth'
+    });
+    return result ? result.data : null;
+  } catch (e) {
+    console.warn('QR decode failed', e);
+    return null;
+  }
+}
+
+async function callGemini(canvas) {
+  if (!apiKey) throw new Error('ยังไม่ได้ตั้งค่า API key — กรุณากดปุ่ม "API Key" ด้านบน');
+
+  // canvas → base64 jpeg
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+  const base64 = dataUrl.split(',')[1];
+
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+  setStatus('กำลังส่งภาพให้<em>Gemini Vision</em>…', { pct: 45, label: 'อัพโหลด' });
+
+  const resp = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{
+        parts: [
+          { text: GEMINI_PROMPT },
+          { inline_data: { mime_type: 'image/jpeg', data: base64 } }
+        ]
+      }],
+      generationConfig: {
+        temperature: 0.1,
+        topP: 0.9,
+        responseMimeType: 'application/json'
+      },
+      safetySettings: [
+        { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+        { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
+      ]
+    })
+  });
+
+  setStatus('Gemini กำลัง<em>วิเคราะห์ฉลาก</em>…', { pct: 75, label: 'AI Analysis' });
+
+  if (!resp.ok) {
+    let detail = '';
+    try {
+      const j = await resp.json();
+      detail = j?.error?.message || JSON.stringify(j).slice(0, 200);
+    } catch { detail = await resp.text().catch(()=>''); }
+    if (resp.status === 400 && /API key/i.test(detail)) throw new Error('API key ไม่ถูกต้อง');
+    if (resp.status === 403) throw new Error('API key ไม่มีสิทธิ์ใช้งาน หรือยังไม่ได้เปิด Generative Language API');
+    if (resp.status === 429) throw new Error('เรียกใช้บ่อยเกินไป (rate limit) ลองใหม่อีกครั้ง');
+    throw new Error(`HTTP ${resp.status} — ${detail}`);
+  }
+
+  const data = await resp.json();
+  const txt = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!txt) {
+    const blockReason = data?.promptFeedback?.blockReason || data?.candidates?.[0]?.finishReason;
+    throw new Error('Gemini ไม่ส่งผลกลับ' + (blockReason ? ` (${blockReason})` : ''));
+  }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(txt);
+  } catch {
+    const cleaned = txt.replace(/^```json\s*|\s*```$/g, '').trim();
+    parsed = JSON.parse(cleaned);
+  }
+  return parsed;
+}
+
+// ----- run scan (with Gemini + jsQR) -----
+async function runScan() {
+  if (!stream && !uploadMode) return;
+  if (!apiKey) {
+    showToast('ยังไม่ได้ตั้งค่า API key — กำลังเปิดหน้าตั้งค่า…');
+    openSettings();
+    return;
+  }
+
+  captureBtn.disabled = true;
+  speakBtn.disabled = true;
+  camStage.classList.add('scanning');
+  const sourceLabel = uploadMode ? 'รูปที่อัพโหลด' : 'ถ่ายภาพฉลาก';
+  setStatus(`กำลัง<em>${sourceLabel}</em> + สแกน QR…`, { pct: 15, label: 'จับภาพ' });
+
+  const cap = uploadMode ? captureFromUpload() : captureFrame();
+  if (!cap || !cap.canvas) {
+    setStatus('จับภาพไม่สำเร็จ', { pct: 0, label: 'ผิดพลาด' });
+    captureBtn.disabled = false;
+    camStage.classList.remove('scanning');
+    return;
+  }
+  const { canvas, qr: qrLocal } = cap;
+  if (!uploadMode) snapshot.classList.add('show');
+
+  if (qrLocal) {
+    setStatus(`พบ QR Code: <em>${escapeHtml(qrLocal.slice(0, 40))}…</em>`, { pct: 30, label: 'QR detected' });
+  }
+
+  try {
+    const result = await callGemini(canvas);
+    const conf = Math.round(result.confidence ?? 0);
+    const text = result.raw_text || '';
+
+    // merge locally-decoded QR with AI result (jsQR is authoritative for actual content)
+    const qrValue = qrLocal || null;
+    const merged = { ...result, qr: qrValue, text, conf, time: new Date() };
+
+    if (conf === 0 && !result.name && !result.generic_name && !qrValue) {
+      setStatus('Gemini ไม่พบข้อมูลฉลากยา — <em>ลองอีกครั้ง</em>', { pct: 100, label: 'ไม่พบข้อมูล' });
+      showToast('ไม่พบข้อมูลฉลากยา — ลองขยับใกล้ขึ้น หรือเพิ่มแสง');
+      rawText.textContent = text || '(Gemini ไม่อ่านข้อความใดเลย)';
+      resultEmpty.style.display = 'none';
+      resultBody.style.display = 'block';
+    } else {
+      lastResult = merged;
+      renderResult(lastResult);
+      // new scan → fresh chat context
+      resetChat();
+      showChatCard();
+      const qrMsg = qrValue ? ' · QR ✓' : '';
+      setStatus(`อ่านฉลากสำเร็จ — ความแม่นยำ <em>${conf}%</em>${qrMsg}`, { pct: 100, label: 'เสร็จสิ้น' });
+      showToast(`อ่านได้ ${conf}%${qrValue ? ' + QR' : ''} — ถาม AI ต่อได้ที่ panel ด้านล่าง`);
+      speakResult();
+    }
+  } catch (err) {
+    console.error(err);
+    setStatus('เกิดข้อผิดพลาด — <em>' + escapeHtml(err.message || 'unknown') + '</em>', { pct: 0, label: 'ผิดพลาด' });
+    showToast('ผิดพลาด: ' + (err.message || err));
+  } finally {
+    captureBtn.disabled = false;
+    camStage.classList.remove('scanning');
+    if (!uploadMode) {
+      setTimeout(() => snapshot.classList.remove('show'), 1200);
+    }
+  }
+}
+
+function renderResult(r) {
+  resultEmpty.style.display = 'none';
+  resultBody.style.display = 'block';
+  const setField = (el, val, dimText = 'ไม่พบในฉลาก') => {
+    if (val && String(val).trim()) {
+      el.textContent = val;
+      el.classList.remove('dim');
+    } else {
+      el.textContent = dimText;
+      el.classList.add('dim');
+    }
+  };
+  setField(fName,       r.name);
+  setField(fGeneric,    r.generic_name);
+  setField(fDose,       r.dose);
+  setField(fUsage,      r.usage);
+  setField(fIndication, r.indication);
+  setField(fWarning,    r.warning, '— ไม่มีคำเตือนพิเศษ');
+  setField(fStorage,    r.storage);
+  setField(fExpiry,     r.expiry);
+  setField(fMfg,        r.manufacture_date);
+  setField(fLot,        r.lot);
+  setField(fReg,        r.registration_no);
+  setField(fBarcode,    r.barcode_no);
+  setField(fManu,       r.manufacturer);
+
+  // QR — could be from jsQR (r.qr) OR from Gemini description
+  const qrText = r.qr || (r.has_qr ? (r.qr_description || 'พบ QR แต่ถอดรหัสไม่ได้ — ลองส่องใกล้ขึ้น') : null);
+  if (r.qr) {
+    // local decoded — make URL clickable
+    const isUrl = /^https?:\/\//i.test(r.qr);
+    fQr.innerHTML = isUrl
+      ? `<a href="${escapeHtml(r.qr)}" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:underline;text-underline-offset:3px;word-break:break-all;">${escapeHtml(r.qr)}</a>`
+      : `<span class="mono" style="font-size:13px;word-break:break-all;">${escapeHtml(r.qr)}</span>`;
+    fQr.classList.remove('dim');
+  } else {
+    setField(fQr, qrText, '— ไม่พบ QR Code');
+  }
+
+  // All numbers — render as chips
+  if (Array.isArray(r.all_numbers) && r.all_numbers.length) {
+    fNumbers.innerHTML = r.all_numbers.map(n =>
+      `<span style="display:inline-block;background:var(--bg-deep);border:1px solid var(--line);padding:3px 9px;margin:2px 4px 2px 0;border-radius:2px;font-size:12px;">${escapeHtml(n)}</span>`
+    ).join('');
+    fNumbers.classList.remove('dim');
+  } else {
+    setField(fNumbers, null, '— ไม่พบตัวเลขเพิ่มเติม');
+  }
+
+  rawText.textContent = r.raw_text || r.text || '';
+  const conf = r.conf ?? r.confidence ?? 0;
+  confBadge.style.display = 'inline-block';
+  confBadge.textContent = `ความแม่นยำ ${conf}%`;
+  confBadge.className = 'conf-badge ' + (conf >= 75 ? 'high' : conf >= 50 ? 'mid' : 'low');
+  speakBtn.disabled = false;
+}
+
+// ----- speech (uses Gemini's voice_summary) -----
+function speakResult() {
+  if (!('speechSynthesis' in window)) {
+    showToast('เบราว์เซอร์นี้ไม่รองรับการอ่านออกเสียง');
+    return;
+  }
+  if (!lastResult) return;
+  speechSynthesis.cancel();
+
+  // prefer Gemini's natural-language summary
+  let phrase = lastResult.voice_summary;
+  if (!phrase) {
+    const r = lastResult;
+    const bits = [];
+    if (r.name)         bits.push(`ยานี้ชื่อ ${r.name}`);
+    if (r.generic_name) bits.push(`ตัวยาคือ ${r.generic_name}`);
+    if (r.dose)         bits.push(`ขนาด ${r.dose}`);
+    if (r.indication)   bits.push(`ใช้สำหรับ ${r.indication}`);
+    if (r.usage)        bits.push(`วิธีใช้ ${r.usage}`);
+    if (r.warning)      bits.push(`ข้อควรระวัง ${r.warning}`);
+    phrase = bits.join('. ') + '.';
+  }
+  if (!phrase || !phrase.trim()) phrase = (lastResult.raw_text || '').slice(0, 240);
+
+  // append QR + critical dates info
+  const extras = [];
+  if (lastResult.expiry)         extras.push(`หมดอายุ ${lastResult.expiry}`);
+  if (lastResult.registration_no) extras.push(`เลขทะเบียน ${lastResult.registration_no}`);
+  if (lastResult.qr) {
+    const isUrl = /^https?:\/\//i.test(lastResult.qr);
+    extras.push(isUrl ? `และพบลิงก์คิวอาร์โค้ดบนฉลาก` : `มีคิวอาร์โค้ดบนฉลาก`);
+  }
+  if (extras.length) phrase += ' ' + extras.join('. ') + '.';
+
+  const u = new SpeechSynthesisUtterance(phrase);
+  u.lang = 'th-TH';
+  u.rate = 0.92;
+  u.pitch = 1;
+
+  const voices = speechSynthesis.getVoices();
+  const th = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('th'));
+  if (th) u.voice = th;
+  speechSynthesis.speak(u);
+  showToast('กำลังอ่านออกเสียง…');
+}
+
+// ====================================================
+// AI CHAT — multi-turn conversation about scanned medicine
+// ====================================================
+
+function buildChatSystemPrompt() {
+  const r = lastResult || {};
+  return `คุณคือ AI เภสัชกรอาสาที่ช่วยอธิบายเรื่องยาให้ผู้พิการและผู้สูงอายุชาวไทยฟัง
+
+ฉลากยาที่ผู้ใช้เพิ่งสแกน:
+- ชื่อ: ${r.name || '—'}
+- ตัวยาสามัญ: ${r.generic_name || '—'}
+- ขนาด: ${r.dose || '—'}
+- วิธีใช้: ${r.usage || '—'}
+- สรรพคุณ: ${r.indication || '—'}
+- คำเตือน: ${r.warning || '—'}
+- วิธีเก็บ: ${r.storage || '—'}
+- วันหมดอายุ: ${r.expiry || '—'}
+- ผู้ผลิต: ${r.manufacturer || '—'}
+- ข้อความบนฉลากทั้งหมด:
+${r.raw_text || r.text || '(ไม่มีข้อความ)'}
+
+กฎการตอบ:
+1. ตอบเป็นภาษาไทยพูดธรรมชาติ เหมือนเภสัชกรพูดให้คนสูงอายุฟัง
+2. สั้นกระชับ 2-4 ประโยค ไม่ใช้ bullet/รายการยาวเพราะคำตอบจะถูกอ่านออกเสียงให้ผู้พิการทางสายตาฟัง
+3. ใช้ความรู้ทางเภสัชศาสตร์ทั่วไปประกอบ — เพราะฉลากไม่ได้บอกทุกอย่าง
+4. ถ้าเป็นเรื่องร้ายแรง เช่น ทานเกินขนาด/แพ้ยา ให้บอกว่า "ควรพบแพทย์ทันที"
+5. ห้ามแนะนำการรักษาที่ขัดกับฉลาก ห้ามทำหน้าที่แทนแพทย์
+6. ตอบเฉพาะเรื่องที่เกี่ยวกับยานี้/สุขภาพ — ถ้าถามนอกเรื่อง ให้บอกสุภาพว่าตอบไม่ได้`;
+}
+
+async function sendChatMessage(question) {
+  if (!apiKey || !lastResult) return;
+  question = String(question || '').trim();
+  if (!question) return;
+
+  // hide suggestions after first message
+  if (chatHistory.length === 0) {
+    chatSuggestions.style.opacity = '0.45';
+  }
+
+  // append user bubble
+  chatHistory.push({ role: 'user', text: question });
+  appendBubble('user', question);
+
+  // append AI placeholder
+  const thinkingEl = appendThinking();
+  sendBtn.disabled = true;
+  chatInput.disabled = true;
+
+  try {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+
+    const contents = chatHistory.map(m => ({
+      role: m.role,
+      parts: [{ text: m.text }]
+    }));
+
+    const resp = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: { parts: [{ text: buildChatSystemPrompt() }] },
+        contents,
+        generationConfig: { temperature: 0.4, topP: 0.9 },
+        safetySettings: [
+          { category: 'HARM_CATEGORY_HARASSMENT', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_HATE_SPEECH', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_SEXUALLY_EXPLICIT', threshold: 'BLOCK_NONE' },
+          { category: 'HARM_CATEGORY_DANGEROUS_CONTENT', threshold: 'BLOCK_NONE' }
+        ]
+      })
+    });
+    if (!resp.ok) {
+      const errTxt = await resp.text().catch(()=>'');
+      throw new Error(`HTTP ${resp.status} ${errTxt.slice(0, 120)}`);
+    }
+    const data = await resp.json();
+    const answer = (data?.candidates?.[0]?.content?.parts?.[0]?.text || '').trim()
+                || 'ขออภัยค่ะ ตอบไม่ได้ในตอนนี้';
+
+    chatHistory.push({ role: 'model', text: answer });
+    thinkingEl.remove();
+    const bubble = appendBubble('ai', answer, true);
+    // auto-speak the answer
+    speakText(answer);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+  } catch (err) {
+    console.error(err);
+    thinkingEl.remove();
+    appendBubble('ai', 'เกิดข้อผิดพลาด: ' + (err.message || err));
+    showToast('แชตผิดพลาด: ' + (err.message || err));
+  } finally {
+    sendBtn.disabled = false;
+    chatInput.disabled = false;
+    chatInput.focus();
+  }
+}
+
+function appendBubble(role, text, withSpeakBtn = false) {
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  const avatar = role === 'user' ? 'คุณ' : 'AI';
+  const speakBtn = withSpeakBtn
+    ? `<br><button class="speak-mini" data-text="${escapeHtml(text)}">🔊 อ่านซ้ำ</button>`
+    : '';
+  div.innerHTML = `
+    <div class="msg-avatar">${avatar}</div>
+    <div>
+      <div class="msg-bubble">${escapeHtml(text).replace(/\n/g, '<br>')}</div>
+      ${speakBtn}
+    </div>`;
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  if (withSpeakBtn) {
+    div.querySelector('.speak-mini').addEventListener('click', () => speakText(text));
+  }
+  return div;
+}
+
+function appendThinking() {
+  const div = document.createElement('div');
+  div.className = 'msg ai';
+  div.innerHTML = `
+    <div class="msg-avatar">AI</div>
+    <div>
+      <div class="msg-bubble thinking"><i></i><i></i><i></i></div>
+    </div>`;
+  chatMessages.appendChild(div);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
+  return div;
+}
+
+function speakText(text) {
+  if (!('speechSynthesis' in window) || !text) return;
+  speechSynthesis.cancel();
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = 'th-TH';
+  u.rate = 0.95;
+  const voices = speechSynthesis.getVoices();
+  const th = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('th'));
+  if (th) u.voice = th;
+  speechSynthesis.speak(u);
+}
+
+// ----- Voice input (Web Speech API) -----
+function initSpeechRec() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return null;
+  const rec = new SR();
+  rec.lang = 'th-TH';
+  rec.interimResults = true;
+  rec.maxAlternatives = 1;
+  rec.continuous = false;
+
+  rec.onresult = (e) => {
+    let transcript = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      transcript += e.results[i][0].transcript;
+    }
+    chatInput.value = transcript;
+    if (e.results[e.results.length-1].isFinal) {
+      stopRecording();
+      if (transcript.trim()) {
+        setTimeout(() => sendChatMessage(transcript.trim()), 300);
+      }
+    }
+  };
+  rec.onerror = (e) => {
+    console.warn('Speech recognition error', e);
+    stopRecording();
+    if (e.error === 'not-allowed') {
+      showToast('กรุณาอนุญาตการใช้ไมโครโฟน');
+    } else if (e.error !== 'no-speech') {
+      showToast('ไมค์ผิดพลาด: ' + e.error);
+    }
+  };
+  rec.onend = () => stopRecording();
+  return rec;
+}
+function startRecording() {
+  if (!speechRec) speechRec = initSpeechRec();
+  if (!speechRec) {
+    showToast('เบราว์เซอร์นี้ไม่รองรับการพูด (ลอง Chrome/Edge)');
+    return;
+  }
+  try {
+    speechRec.start();
+    isRecording = true;
+    micBtn.classList.add('recording');
+    chatInput.placeholder = '🎙️ กำลังฟัง… พูดได้เลย';
+  } catch (e) {
+    console.warn(e);
+  }
+}
+function stopRecording() {
+  if (speechRec && isRecording) {
+    try { speechRec.stop(); } catch {}
+  }
+  isRecording = false;
+  micBtn.classList.remove('recording');
+  chatInput.placeholder = 'พิมพ์คำถาม หรือกดไมค์พูด…';
+}
+
+function showChatCard() {
+  chatCard.style.display = 'block';
+}
+function resetChat() {
+  chatHistory = [];
+  chatMessages.innerHTML = '';
+  chatSuggestions.style.opacity = '1';
+}
+
+// ----- settings modal -----
+function openSettings() {
+  apiKeyInput.value = apiKey || '';
+  apiKeyInput.type = 'password';
+  toggleKeyBtn.textContent = 'SHOW';
+  document.querySelectorAll('.model-opt').forEach(b => {
+    b.classList.toggle('active', b.dataset.model === model);
+  });
+  settingsModal.classList.add('open');
+  setTimeout(() => apiKeyInput.focus(), 250);
+}
+function closeSettings() {
+  settingsModal.classList.remove('open');
+}
+function updateKeyBadge() {
+  if (apiKey) {
+    keyState.textContent = 'พร้อมใช้';
+    openSettingsBtn.classList.add('ready');
+  } else {
+    keyState.textContent = 'ยังไม่ตั้ง';
+    openSettingsBtn.classList.remove('ready');
+  }
+}
+function loadSettings() {
+  // API key อ่านจาก localStorage เท่านั้น — ไม่ได้ฮาร์ดโค้ดในไฟล์
+  apiKey = localStorage.getItem('scanrx_gemini_key') || '';
+  model  = localStorage.getItem('scanrx_gemini_model') || 'gemini-2.0-flash';
+  updateKeyBadge();
+}
+
+// ----- history -----
+function saveToHistory() {
+  if (!lastResult) return;
+  history.unshift({ ...lastResult, id: Date.now() });
+  if (history.length > 12) history = history.slice(0, 12);
+  renderHistory();
+  try { localStorage.setItem('scanrx_history', JSON.stringify(history)); } catch(e){}
+  showToast('บันทึกลงประวัติแล้ว');
+}
+function loadHistory() {
+  try {
+    const raw = localStorage.getItem('scanrx_history');
+    if (raw) history = JSON.parse(raw);
+  } catch(e) { history = []; }
+  renderHistory();
+}
+function renderHistory() {
+  if (!history.length) {
+    historyList.innerHTML = '<div class="history-empty">ยังไม่มีประวัติ · เริ่มสแกนเพื่อบันทึก</div>';
+    return;
+  }
+  historyList.innerHTML = history.map((h, i) => {
+    const t = new Date(h.time);
+    const tStr = `${String(t.getHours()).padStart(2,'0')}:${String(t.getMinutes()).padStart(2,'0')}`;
+    const name = h.name || h.generic_name || (h.raw_text || h.text || '').split('\n')[0].slice(0, 40) || 'ไม่พบชื่อ';
+    const dose = h.dose || '';
+    const num = String(i + 1).padStart(2, '0');
+    return `
+      <div class="history-item" data-id="${h.id}">
+        <div class="hist-num serif">${num}</div>
+        <div>
+          <div class="hist-name">${escapeHtml(name)}</div>
+          <div class="hist-meta">${escapeHtml(dose) || '—'} · ${h.conf || 0}%</div>
+        </div>
+        <div class="hist-time">${tStr}</div>
+      </div>`;
+  }).join('');
+  historyList.querySelectorAll('.history-item').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = +el.dataset.id;
+      const item = history.find(x => x.id === id);
+      if (item) restoreFromHistory(item);
+    });
+  });
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])
+  );
+}
+function restoreFromHistory(item) {
+  lastResult = item;
+  renderResult(item);
+  resetChat();
+  showChatCard();
+  setStatus('แสดงผลจาก<em>ประวัติ</em> — ถาม AI ต่อได้', { pct: 100, label: 'ดูประวัติ' });
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// ----- events -----
+startCamBtn.addEventListener('click', () => startCamera(cameraSelect.value || null));
+startCamBtnEmpty.addEventListener('click', () => startCamera());
+stopCamBtn.addEventListener('click', stopCamera);
+cameraSelect.addEventListener('change', () => stream && startCamera(cameraSelect.value));
+captureBtn.addEventListener('click', runScan);
+speakBtn.addEventListener('click', speakResult);
+speakResultBtn.addEventListener('click', speakResult);
+resetBtn.addEventListener('click', () => {
+  resultEmpty.style.display = 'block';
+  resultBody.style.display = 'none';
+  confBadge.style.display = 'none';
+  lastResult = null;
+  speakBtn.disabled = true;
+  if (uploadMode) exitUploadMode();
+  // hide & clear chat
+  chatCard.style.display = 'none';
+  resetChat();
+  setStatus('พร้อม<em>เริ่มสแกน</em>ใหม่', { pct: 0, label: 'รอคำสั่ง' });
+});
+
+// ----- chat events -----
+sendBtn.addEventListener('click', () => {
+  const q = chatInput.value.trim();
+  if (q) { chatInput.value = ''; sendChatMessage(q); }
+});
+chatInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendBtn.click();
+  }
+});
+micBtn.addEventListener('click', () => {
+  if (isRecording) stopRecording();
+  else startRecording();
+});
+chatSuggestions.addEventListener('click', (e) => {
+  const chip = e.target.closest('.chip');
+  if (!chip) return;
+  const q = chip.dataset.q;
+  if (q) sendChatMessage(q);
+});
+clearChatBtn.addEventListener('click', () => {
+  if (chatHistory.length === 0) return;
+  resetChat();
+  showToast('ล้างแชตแล้ว');
+});
+
+// ----- upload / drag-drop / paste -----
+function openFilePicker() { fileInput.click(); }
+uploadBtn.addEventListener('click', openFilePicker);
+uploadBtnEmpty.addEventListener('click', openFilePicker);
+
+fileInput.addEventListener('change', (e) => {
+  const file = e.target.files && e.target.files[0];
+  if (file) handleUploadFile(file);
+  fileInput.value = ''; // reset so same file can be re-selected
+});
+
+clearUploadBtn.addEventListener('click', (e) => {
+  e.stopPropagation();
+  exitUploadMode();
+  setStatus(stream ? 'ล้างรูปแล้ว — กลับสู่<em>กล้องสด</em>' : 'ล้างรูปแล้ว — <em>เปิดกล้องหรืออัพโหลดใหม่</em>', { pct: 0, label: 'พร้อม' });
+  showToast('ล้างรูปที่อัพโหลดแล้ว');
+});
+
+// drag-and-drop on the entire cam-stage
+let dragCounter = 0;
+['dragenter', 'dragover'].forEach(evt => {
+  camStage.addEventListener(evt, (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.dataTransfer && e.dataTransfer.types && e.dataTransfer.types.includes('Files')) {
+      if (evt === 'dragenter') dragCounter++;
+      dropOverlay.classList.add('show');
+    }
+  });
+});
+camStage.addEventListener('dragleave', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  dragCounter--;
+  if (dragCounter <= 0) {
+    dragCounter = 0;
+    dropOverlay.classList.remove('show');
+  }
+});
+camStage.addEventListener('drop', (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  dragCounter = 0;
+  dropOverlay.classList.remove('show');
+  const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+  if (file) handleUploadFile(file);
+});
+
+// also accept drops anywhere on the document (convenience)
+document.addEventListener('dragover', (e) => {
+  if (e.dataTransfer && e.dataTransfer.types && e.dataTransfer.types.includes('Files')) {
+    e.preventDefault();
+  }
+});
+document.addEventListener('drop', (e) => {
+  if (e.target.closest('.cam-stage')) return; // handled above
+  if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]) {
+    e.preventDefault();
+    handleUploadFile(e.dataTransfer.files[0]);
+  }
+});
+
+// paste from clipboard (Ctrl+V / Cmd+V)
+document.addEventListener('paste', (e) => {
+  if (e.target.matches('input, textarea')) return;
+  const items = e.clipboardData && e.clipboardData.items;
+  if (!items) return;
+  for (const item of items) {
+    if (item.type && item.type.startsWith('image/')) {
+      const blob = item.getAsFile();
+      if (blob) {
+        e.preventDefault();
+        handleUploadFile(blob);
+        return;
+      }
+    }
+  }
+});
+copyBtn.addEventListener('click', () => {
+  if (!lastResult) return;
+  navigator.clipboard.writeText(lastResult.text || '');
+  showToast('คัดลอกข้อความแล้ว');
+});
+saveBtn.addEventListener('click', saveToHistory);
+clearHistBtn.addEventListener('click', () => {
+  if (!history.length) return;
+  if (confirm('ล้างประวัติทั้งหมด?')) {
+    history = [];
+    renderHistory();
+    localStorage.removeItem('scanrx_history');
+    showToast('ล้างประวัติแล้ว');
+  }
+});
+
+// keyboard shortcuts
+document.addEventListener('keydown', (e) => {
+  if (e.target.matches('input, textarea, select')) return;
+  if (e.ctrlKey || e.metaKey) return; // let paste/cut/copy through
+  if (e.code === 'Space') { e.preventDefault(); if (!captureBtn.disabled) runScan(); }
+  else if (e.key === 's' || e.key === 'S') { if (lastResult) saveToHistory(); }
+  else if (e.key === 'r' || e.key === 'R') { resetBtn.click(); }
+  else if (e.key === 'v' || e.key === 'V') { if (lastResult) speakResult(); }
+  else if (e.key === 'u' || e.key === 'U') { openFilePicker(); }
+});
+
+// settings modal events
+openSettingsBtn.addEventListener('click', openSettings);
+closeSettingsBtn.addEventListener('click', closeSettings);
+settingsModal.addEventListener('click', (e) => { if (e.target === settingsModal) closeSettings(); });
+
+toggleKeyBtn.addEventListener('click', () => {
+  apiKeyInput.type = apiKeyInput.type === 'password' ? 'text' : 'password';
+  toggleKeyBtn.textContent = apiKeyInput.type === 'password' ? 'SHOW' : 'HIDE';
+});
+
+document.querySelectorAll('.model-opt').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.model-opt').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    model = btn.dataset.model;
+    localStorage.setItem('scanrx_gemini_model', model);
+  });
+});
+
+saveKeyBtn.addEventListener('click', () => {
+  const v = apiKeyInput.value.trim();
+  if (!v) { showToast('กรุณาใส่ API key ก่อน'); return; }
+  if (!/^AIza[A-Za-z0-9_\-]{10,}/.test(v)) {
+    if (!confirm('คีย์นี้ไม่ขึ้นต้นด้วย "AIza" ตามรูปแบบของ Google — บันทึกต่อหรือไม่?')) return;
+  }
+  apiKey = v;
+  localStorage.setItem('scanrx_gemini_key', apiKey);
+  updateKeyBadge();
+  closeSettings();
+  showToast('บันทึก API key แล้ว · พร้อมสแกน');
+  setStatus('API key พร้อมใช้ — <em>เปิดกล้องและกดสแกน</em>ได้เลย', { pct: 10, label: 'พร้อมใช้' });
+});
+
+clearKeyBtn.addEventListener('click', () => {
+  if (!apiKey) { showToast('ไม่มี key ให้ลบ'); return; }
+  if (!confirm('ลบ API key ออกจากเบราว์เซอร์?')) return;
+  apiKey = '';
+  apiKeyInput.value = '';
+  localStorage.removeItem('scanrx_gemini_key');
+  updateKeyBadge();
+  showToast('ลบ API key แล้ว');
+});
+
+// ESC closes modal
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && settingsModal.classList.contains('open')) closeSettings();
+});
+
+// pre-warm voices
+if ('speechSynthesis' in window) {
+  speechSynthesis.getVoices();
+  speechSynthesis.onvoiceschanged = () => speechSynthesis.getVoices();
+}
+
+// init
+loadSettings();
+loadHistory();
+listCameras();
+navigator.mediaDevices?.addEventListener?.('devicechange', listCameras);
+
+if (!apiKey) {
+  setStatus('ต้องตั้งค่า <em>Gemini API key</em>ก่อน — กำลังเปิดหน้าตั้งค่า', { pct: 0, label: 'ตั้งค่า' });
+  setTimeout(openSettings, 800);
+} else {
+  setStatus('พร้อมเปิดกล้องและ<em>เริ่มสแกน</em> · API key ✓', { pct: 10, label: 'พร้อมใช้' });
+}
+
+console.log('%cScanRx · Gemini Vision ready', 'background:#0E4A38;color:#F4C543;padding:4px 10px;border-radius:2px;font-family:JetBrains Mono;');
+console.log('shortcuts:  SPACE=scan · U=upload · S=save · R=reset · V=voice · ESC=close modal');
+console.log('upload also via: ปุ่ม "อัพโหลดรูป" · ลากวางบนหน้าจอ · Ctrl+V/Cmd+V วางจาก clipboard');
+</script>
+</body>
+</html>

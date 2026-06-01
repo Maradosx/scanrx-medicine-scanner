@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ขอ API Key — คู่มือทีละขั้นตอน · ScanRx</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800;9..144,900&family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #EFE9DC;
+    --bg-deep: #E6DECC;
+    --surface: #FBF9F2;
+    --ink: #131311;
+    --ink-soft: #2A2924;
+    --primary: #0E4A38;
+    --primary-deep: #073023;
+    --accent: #E85D2A;
+    --highlight: #F4C543;
+    --muted: #756F61;
+    --line: rgba(19, 19, 17, 0.14);
+    --line-strong: rgba(19, 19, 17, 0.28);
+    --success: #2E7D4F;
+    /* google brand-ish */
+    --g-blue: #1A73E8;
+    --g-red: #EA4335;
+    --g-yellow: #FBBC04;
+    --g-green: #34A853;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'IBM Plex Sans Thai', sans-serif;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    background:
+      radial-gradient(circle at 10% 5%, rgba(232, 93, 42, 0.05), transparent 45%),
+      radial-gradient(circle at 92% 95%, rgba(14, 74, 56, 0.06), transparent 50%),
+      var(--bg);
+    min-height: 100vh;
+  }
+
+  .serif { font-family: 'Fraunces', serif; font-feature-settings: "ss01", "ss02"; }
+  .mono  { font-family: 'JetBrains Mono', monospace; }
+
+  /* ========== TOP BAR ========== */
+  .topbar {
+    border-bottom: 1px solid var(--line);
+    background: rgba(239, 233, 220, 0.92);
+    backdrop-filter: blur(12px);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  .topbar-inner {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 16px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 24px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    text-decoration: none;
+    color: inherit;
+  }
+  .brand-mark {
+    width: 38px; height: 38px;
+    background: var(--ink);
+    color: var(--bg);
+    display: grid;
+    place-items: center;
+    font-family: 'Fraunces', serif;
+    font-weight: 900;
+    font-size: 20px;
+    border-radius: 2px;
+    position: relative;
+    overflow: hidden;
+  }
+  .brand-mark::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent 40%, var(--accent) 40%, var(--accent) 60%, transparent 60%);
+    opacity: 0.85;
+    mix-blend-mode: screen;
+  }
+  .brand-mark span { position: relative; z-index: 2; }
+  .brand-name {
+    font-family: 'Fraunces', serif;
+    font-weight: 800;
+    font-size: 19px;
+    letter-spacing: -0.02em;
+  }
+  .brand-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+  .back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 16px;
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    text-decoration: none;
+    color: var(--ink);
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.18s;
+  }
+  .back-btn:hover { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+  .back-btn svg { width: 14px; height: 14px; }
+
+  /* ========== HERO ========== */
+  .hero {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 72px 32px 48px;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 48px;
+    align-items: end;
+    border-bottom: 1px solid var(--line);
+  }
+  .hero-num {
+    font-family: 'Fraunces', serif;
+    font-weight: 900;
+    font-size: 200px;
+    line-height: 0.78;
+    letter-spacing: -0.06em;
+    color: var(--primary);
+    font-variation-settings: "opsz" 144;
+  }
+  .hero-num em { font-style: italic; color: var(--accent); }
+  .hero-content h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 60px;
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+  .hero-content h1 em {
+    font-style: italic;
+    font-weight: 400;
+    color: var(--muted);
+  }
+  .hero-sub {
+    margin-top: 18px;
+    max-width: 580px;
+    font-size: 17px;
+    color: var(--ink-soft);
+    line-height: 1.6;
+  }
+  .hero-meta {
+    margin-top: 24px;
+    display: flex;
+    gap: 20px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .hero-meta span b { color: var(--ink); font-weight: 700; }
+  .hero-meta .dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    background: var(--accent);
+    border-radius: 50%;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+
+  /* ========== STEPS ========== */
+  .steps {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 64px 32px 32px;
+  }
+  .steps-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .steps-eyebrow b { color: var(--accent); }
+  .steps-title {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 38px;
+    letter-spacing: -0.02em;
+    margin-bottom: 48px;
+  }
+
+  .step {
+    display: grid;
+    grid-template-columns: 110px minmax(0, 1fr) minmax(0, 1.1fr);
+    gap: 40px;
+    align-items: start;
+    padding: 56px 0;
+    border-top: 1px solid var(--line);
+  }
+  .step:last-child { border-bottom: 1px solid var(--line); }
+
+  .step-num {
+    font-family: 'Fraunces', serif;
+    font-weight: 900;
+    font-size: 88px;
+    line-height: 0.9;
+    color: var(--primary);
+    letter-spacing: -0.04em;
+  }
+  .step-num em { color: var(--accent); font-style: italic; }
+
+  .step-text h3 {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 30px;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin-bottom: 14px;
+  }
+  .step-text p {
+    color: var(--ink-soft);
+    font-size: 15.5px;
+    line-height: 1.65;
+    margin-bottom: 14px;
+  }
+  .step-text p strong { color: var(--ink); }
+  .step-text a {
+    color: var(--primary);
+    font-weight: 600;
+    text-decoration: underline;
+    text-decoration-thickness: 1.5px;
+    text-underline-offset: 4px;
+  }
+  .step-text a:hover { color: var(--accent); }
+
+  .tip-box {
+    margin-top: 18px;
+    padding: 14px 16px;
+    background: rgba(244, 197, 67, 0.16);
+    border-left: 3px solid var(--highlight);
+    border-radius: 2px;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+  }
+  .tip-box strong { color: var(--ink); }
+  .tip-box .tip-label {
+    display: inline-block;
+    background: var(--ink);
+    color: var(--highlight);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    padding: 2px 7px;
+    border-radius: 2px;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+
+  .warn-box {
+    margin-top: 18px;
+    padding: 14px 16px;
+    background: rgba(232, 93, 42, 0.10);
+    border-left: 3px solid var(--accent);
+    border-radius: 2px;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+  }
+  .warn-box .warn-label {
+    display: inline-block;
+    background: var(--accent);
+    color: #fff;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.2em;
+    padding: 2px 7px;
+    border-radius: 2px;
+    margin-right: 8px;
+    vertical-align: middle;
+  }
+
+  /* ========== MOCK BROWSER (visual aid) ========== */
+  .mock {
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 18px 40px -22px rgba(0,0,0,0.25);
+  }
+  .mock-chrome {
+    background: var(--bg-deep);
+    border-bottom: 1px solid var(--line);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .mock-dots {
+    display: flex;
+    gap: 5px;
+  }
+  .mock-dots i {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--line-strong);
+  }
+  .mock-dots i:nth-child(1) { background: #ED6A5E; }
+  .mock-dots i:nth-child(2) { background: #F5BF4F; }
+  .mock-dots i:nth-child(3) { background: #62C554; }
+  .mock-url {
+    flex: 1;
+    background: var(--surface);
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    border: 1px solid var(--line);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .mock-url b { color: var(--primary); font-weight: 500; }
+  .mock-body {
+    padding: 20px;
+    background: var(--surface);
+    min-height: 200px;
+  }
+
+  /* Step 1 mock: aistudio site */
+  .mock-aistudio-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 16px;
+  }
+  .mock-aistudio-head .gicon {
+    width: 28px; height: 28px;
+    background: linear-gradient(135deg, var(--g-blue), var(--g-green));
+    border-radius: 6px;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    font-family: 'Fraunces', serif;
+    font-weight: 800;
+    font-size: 14px;
+  }
+  .mock-aistudio-head .gtitle {
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .mock-aistudio-head .gtitle small {
+    display: block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.16em;
+    color: var(--muted);
+    text-transform: uppercase;
+    margin-top: 2px;
+  }
+  .mock-aistudio-body {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .mock-row {
+    background: var(--bg);
+    padding: 12px;
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--line);
+  }
+  .mock-row .mock-label {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .mock-row .mock-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--ink);
+  }
+  .mock-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--g-blue);
+    color: #fff;
+    padding: 9px 14px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+  }
+  .mock-btn .plus {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 14px;
+    line-height: 1;
+  }
+  .mock-btn.green { background: var(--g-green); }
+  .mock-cursor {
+    position: absolute;
+    width: 16px; height: 16px;
+    pointer-events: none;
+  }
+  .mock-cursor svg { width: 100%; height: 100%; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
+
+  /* Step 2 mock: google signin */
+  .mock-signin {
+    background: linear-gradient(135deg, #FFFFFF, #F7F8FA);
+    padding: 24px;
+    border-radius: 4px;
+    text-align: center;
+    border: 1px solid var(--line);
+  }
+  .glogo {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-bottom: 12px;
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 18px;
+    letter-spacing: -0.02em;
+  }
+  .glogo .gG { color: var(--g-blue); }
+  .glogo .go1 { color: var(--g-red); }
+  .glogo .go2 { color: var(--g-yellow); }
+  .glogo .gg { color: var(--g-blue); }
+  .glogo .gl { color: var(--g-green); }
+  .glogo .ge { color: var(--g-red); }
+  .mock-signin h4 {
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 19px;
+    margin-bottom: 4px;
+  }
+  .mock-signin .sub {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+  .mock-email {
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-size: 12px;
+    color: var(--ink);
+    text-align: left;
+    margin-bottom: 12px;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .mock-email .cursor-bar {
+    display: inline-block;
+    width: 1px;
+    height: 14px;
+    background: var(--g-blue);
+    vertical-align: middle;
+    margin-left: 2px;
+    animation: blink 1s infinite;
+  }
+  @keyframes blink { 50% { opacity: 0; } }
+
+  /* Step 3 mock: create key dialog */
+  .mock-dialog {
+    background: #fff;
+    border: 1px solid var(--line-strong);
+    border-radius: 6px;
+    padding: 16px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+  }
+  .mock-dialog h5 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 17px;
+    margin-bottom: 4px;
+  }
+  .mock-dialog p {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+  .mock-project {
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-size: 12px;
+    color: var(--ink);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+  }
+  .mock-project .pname {
+    font-weight: 500;
+  }
+  .mock-project .arrow {
+    color: var(--muted);
+  }
+  .mock-dialog .row-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .mock-btn-secondary {
+    background: transparent;
+    border: 1px solid var(--line-strong);
+    color: var(--ink);
+    padding: 8px 14px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  /* Step 4 mock: shown key */
+  .key-display {
+    background: linear-gradient(135deg, #0F2E22, #1A4D3A);
+    border-radius: 6px;
+    padding: 18px;
+    color: #E8F5EE;
+    position: relative;
+  }
+  .key-display .key-eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--highlight);
+    margin-bottom: 8px;
+  }
+  .key-row {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 4px;
+    padding: 12px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+  .key-row code {
+    color: #fff;
+    letter-spacing: 0.04em;
+  }
+  .key-row .copy-icon {
+    background: rgba(255,255,255,0.12);
+    border-radius: 4px;
+    width: 28px; height: 28px;
+    display: grid;
+    place-items: center;
+    color: #fff;
+    flex-shrink: 0;
+    margin-left: 12px;
+  }
+  .key-display .key-hint {
+    font-size: 11px;
+    color: rgba(255,255,255,0.6);
+    margin-top: 10px;
+    font-family: 'IBM Plex Sans Thai', sans-serif;
+  }
+
+  /* Step 5 mock: ScanRx modal */
+  .mock-scanrx {
+    background: var(--surface);
+    border: 1px solid var(--line-strong);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .mock-scanrx-head {
+    background: var(--bg-deep);
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .mock-scanrx-head .eyebrow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .mock-scanrx-head h5 {
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 17px;
+    margin-top: 2px;
+  }
+  .mock-scanrx-head h5 em { color: var(--accent); font-style: italic; }
+  .mock-scanrx-body {
+    padding: 18px;
+  }
+  .mock-scanrx-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .mock-scanrx-input {
+    background: var(--bg);
+    border: 1px solid var(--accent);
+    border-radius: 2px;
+    padding: 10px 12px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--ink);
+    box-shadow: 0 0 0 3px rgba(232, 93, 42, 0.15);
+  }
+  .mock-scanrx-input::after {
+    content: '|';
+    color: var(--accent);
+    animation: blink 1s infinite;
+    margin-left: 2px;
+  }
+  .mock-scanrx-actions {
+    margin-top: 14px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .mock-scanrx-btn {
+    background: var(--accent);
+    color: #fff;
+    border-radius: 2px;
+    padding: 9px 16px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  /* ========== FAQ ========== */
+  .faq {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 64px 32px;
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 56px;
+    border-top: 1px solid var(--line);
+  }
+  .faq-head h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 42px;
+    line-height: 1;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+  }
+  .faq-head h2 em { font-style: italic; color: var(--accent); }
+  .faq-head p {
+    margin-top: 16px;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.6;
+    max-width: 280px;
+  }
+  details.faq-item {
+    border-top: 1px solid var(--line);
+    padding: 22px 0;
+  }
+  details.faq-item:last-child { border-bottom: 1px solid var(--line); }
+  details.faq-item summary {
+    cursor: pointer;
+    list-style: none;
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 20px;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    transition: color 0.18s;
+  }
+  details.faq-item summary::-webkit-details-marker { display: none; }
+  details.faq-item summary:hover { color: var(--accent); }
+  details.faq-item summary::after {
+    content: '+';
+    font-family: 'Fraunces', serif;
+    font-weight: 300;
+    font-size: 36px;
+    line-height: 0.4;
+    color: var(--accent);
+    flex-shrink: 0;
+    transition: transform 0.25s;
+  }
+  details.faq-item[open] summary::after {
+    transform: rotate(45deg);
+  }
+  details.faq-item .answer {
+    margin-top: 14px;
+    color: var(--ink-soft);
+    font-size: 14.5px;
+    line-height: 1.7;
+  }
+  details.faq-item .answer code {
+    font-family: 'JetBrains Mono', monospace;
+    background: var(--bg-deep);
+    padding: 2px 6px;
+    border-radius: 2px;
+    font-size: 12.5px;
+  }
+  details.faq-item .answer a {
+    color: var(--primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* ========== CTA ========== */
+  .cta {
+    background: var(--ink);
+    color: var(--bg);
+    margin-top: 32px;
+  }
+  .cta-inner {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 80px 32px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 40px;
+    align-items: center;
+  }
+  .cta h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 48px;
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+  .cta h2 em { color: var(--highlight); font-style: italic; }
+  .cta p {
+    margin-top: 14px;
+    color: rgba(255,255,255,0.65);
+    font-size: 15px;
+    line-height: 1.6;
+    max-width: 520px;
+  }
+  .cta-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--accent);
+    color: #fff;
+    text-decoration: none;
+    font-family: 'Fraunces', serif;
+    font-weight: 700;
+    font-size: 17px;
+    padding: 18px 26px;
+    border-radius: 4px;
+    transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+    box-shadow: 0 6px 0 #b94014, 0 14px 24px rgba(232, 93, 42, 0.4);
+  }
+  .cta-btn:hover { transform: translateY(-3px); box-shadow: 0 9px 0 #b94014, 0 18px 32px rgba(232, 93, 42, 0.45); }
+  .cta-btn:active { transform: translateY(3px); box-shadow: 0 3px 0 #b94014, 0 8px 16px rgba(232, 93, 42, 0.3); }
+  .cta-btn svg { width: 20px; height: 20px; }
+
+  /* ========== FOOTER ========== */
+  footer {
+    border-top: 1px solid rgba(255,255,255,0.1);
+    background: var(--ink);
+    color: rgba(255,255,255,0.55);
+    padding: 24px 32px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+  .footer-inner {
+    max-width: 1180px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  footer span.dim { color: rgba(255,255,255,0.3); }
+
+  /* ========== RESPONSIVE ========== */
+  @media (max-width: 960px) {
+    .hero { grid-template-columns: 1fr; padding: 48px 24px 32px; gap: 16px; }
+    .hero-num { font-size: 132px; }
+    .hero-content h1 { font-size: 42px; }
+    .steps { padding: 40px 24px; }
+    .steps-title { font-size: 30px; margin-bottom: 32px; }
+    .step { grid-template-columns: 1fr; gap: 20px; padding: 40px 0; }
+    .step-num { font-size: 64px; }
+    .step-text h3 { font-size: 24px; }
+    .faq { grid-template-columns: 1fr; gap: 32px; padding: 48px 24px; }
+    .faq-head h2 { font-size: 32px; }
+    .cta-inner { grid-template-columns: 1fr; padding: 56px 24px; gap: 24px; }
+    .cta h2 { font-size: 32px; }
+  }
+  @media (max-width: 560px) {
+    .topbar-inner { padding: 12px 18px; }
+    .brand-tag { display: none; }
+    .back-btn span { display: none; }
+    .back-btn { padding: 9px; }
+    .hero { padding: 32px 18px 24px; }
+    .hero-num { font-size: 96px; }
+    .hero-content h1 { font-size: 30px; }
+    .hero-sub { font-size: 15px; }
+    .hero-meta { flex-direction: column; gap: 8px; }
+    .steps { padding: 32px 18px; }
+  }
+
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ============ TOP BAR ============ -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="medicine-scanner.html">
+      <div class="brand-mark"><span>R</span></div>
+      <div>
+        <div class="brand-name">ScanRx<span style="color:var(--accent)">·</span></div>
+        <div class="brand-tag">API Key Setup Guide</div>
+      </div>
+    </a>
+    <a class="back-btn" href="medicine-scanner.html">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+      <span>กลับสู่ ScanRx</span>
+    </a>
+  </div>
+</header>
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="hero-num serif">00<em>.</em></div>
+  <div class="hero-content">
+    <h1 class="serif">ขอ Gemini API Key<br><em>ฟรี · ใช้เวลา 1 นาที.</em></h1>
+    <p class="hero-sub">
+      คู่มือทีละขั้นตอนสำหรับการสมัครขอกุญแจ API ของ Google Gemini
+      เพื่อให้ ScanRx อ่านฉลากยาได้ — ทุกอย่างฟรีและไม่ต้องใช้บัตรเครดิต
+    </p>
+    <div class="hero-meta">
+      <span><span class="dot"></span>ใช้เวลา <b>~ 1 นาที</b></span>
+      <span><span class="dot"></span>ค่าใช้จ่าย <b>ฟรี</b></span>
+      <span><span class="dot"></span>ต้องมี <b>Google Account</b></span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ STEPS ============ -->
+<section class="steps">
+  <div class="steps-eyebrow">GUIDE · <b>5 ขั้นตอน</b></div>
+  <h2 class="steps-title serif">จากศูนย์ถึงสแกนได้ ใน <em style="font-style:italic;color:var(--accent);">5 ขั้น</em></h2>
+
+  <!-- ===== STEP 1 ===== -->
+  <article class="step">
+    <div class="step-num serif">01<em>.</em></div>
+    <div class="step-text">
+      <h3>เปิดเว็บ Google AI Studio</h3>
+      <p>
+        ไปที่หน้า API Keys ของ Google AI Studio โดยตรง — เป็นเว็บอย่างเป็นทางการของ Google
+        สำหรับจัดการกุญแจ Gemini ทั้งหมด
+      </p>
+      <p>
+        คัดลอกลิงก์นี้แล้วเปิดในเบราว์เซอร์ <strong>Chrome / Safari / Edge</strong>:<br>
+        <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">https://aistudio.google.com/app/apikey</a>
+      </p>
+      <div class="tip-box">
+        <span class="tip-label">TIP</span>
+        <strong>เปิดในแท็บใหม่</strong> ของเบราว์เซอร์ที่เปิดคู่มือนี้ไว้ จะได้ทำตามขั้นตอนพร้อมกันได้ง่าย
+      </div>
+    </div>
+    <div class="mock">
+      <div class="mock-chrome">
+        <div class="mock-dots"><i></i><i></i><i></i></div>
+        <div class="mock-url">https://<b>aistudio.google.com</b>/app/apikey</div>
+      </div>
+      <div class="mock-body">
+        <div class="mock-aistudio-head">
+          <div class="gicon">G</div>
+          <div class="gtitle">
+            Google AI Studio
+            <small>API KEYS · ALL PROJECTS</small>
+          </div>
+        </div>
+        <p style="font-size:12px;color:var(--muted);margin-bottom:14px;">หน้าเว็บนี้คือที่ที่คุณจะสร้างกุญแจ API</p>
+        <div style="display:flex;justify-content:flex-end;">
+          <button class="mock-btn"><span class="plus">+</span> Create API key</button>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- ===== STEP 2 ===== -->
+  <article class="step">
+    <div class="step-num serif">02<em>.</em></div>
+    <div class="step-text">
+      <h3>เข้าสู่ระบบด้วย Google Account</h3>
+      <p>
+        ถ้ายังไม่ได้ login Google จะให้กรอกอีเมล Gmail ก่อน
+        ใช้ <strong>บัญชี Gmail ส่วนตัวอันไหนก็ได้</strong> ไม่ต้องสมัครใหม่
+      </p>
+      <p>
+        ถ้ายังไม่มี Gmail สามารถสมัครฟรีได้ที่ <a href="https://accounts.google.com/signup" target="_blank" rel="noopener">accounts.google.com/signup</a>
+      </p>
+      <div class="warn-box">
+        <span class="warn-label">โปรดทราบ</span>
+        Gmail บางบัญชีที่เป็น <strong>Google Workspace ขององค์กร</strong> อาจถูกแอดมินบล็อกไม่ให้ใช้ AI Studio — กรณีนั้นให้ใช้ Gmail ส่วนตัวแทน
+      </div>
+    </div>
+    <div class="mock">
+      <div class="mock-chrome">
+        <div class="mock-dots"><i></i><i></i><i></i></div>
+        <div class="mock-url">accounts.google.com/signin</div>
+      </div>
+      <div class="mock-body" style="display:grid;place-items:center;background:#F7F8FA;">
+        <div class="mock-signin" style="max-width:280px;width:100%;">
+          <div class="glogo">
+            <span class="gG">G</span><span class="go1">o</span><span class="go2">o</span><span class="gg">g</span><span class="gl">l</span><span class="ge">e</span>
+          </div>
+          <h4 class="serif">เข้าสู่ระบบ</h4>
+          <div class="sub">ใช้บัญชี Google ของคุณ</div>
+          <div class="mock-email">
+            you@gmail.com<span class="cursor-bar"></span>
+          </div>
+          <button class="mock-btn" style="width:100%;justify-content:center;">ถัดไป</button>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- ===== STEP 3 ===== -->
+  <article class="step">
+    <div class="step-num serif">03<em>.</em></div>
+    <div class="step-text">
+      <h3>กดปุ่ม "Create API key"</h3>
+      <p>
+        หลัง login แล้วจะกลับมาที่หน้า API Keys ให้กดปุ่มสีน้ำเงิน <strong>"+ Create API key"</strong>
+        ที่มุมขวาบน
+      </p>
+      <p>
+        ระบบอาจถามให้เลือก <strong>Google Cloud Project</strong> — ถ้าไม่มีให้กด
+        <strong>"Create API key in new project"</strong> ระบบจะสร้างให้อัตโนมัติ
+      </p>
+      <div class="tip-box">
+        <span class="tip-label">TIP</span>
+        ครั้งแรกอาจมีหน้าให้ <strong>ยอมรับเงื่อนไขการใช้งาน</strong> ของ Google — ติ๊กถูกแล้วกด Continue ได้เลย
+      </div>
+    </div>
+    <div class="mock">
+      <div class="mock-chrome">
+        <div class="mock-dots"><i></i><i></i><i></i></div>
+        <div class="mock-url">aistudio.google.com/app/apikey</div>
+      </div>
+      <div class="mock-body" style="background:rgba(0,0,0,0.04);">
+        <div class="mock-dialog">
+          <h5 class="serif">Create API key</h5>
+          <p>เลือก Google Cloud Project เพื่อสร้างกุญแจ</p>
+          <div class="mock-project">
+            <span class="pname">Gemini API · Default Project</span>
+            <span class="arrow">▾</span>
+          </div>
+          <div class="row-actions">
+            <button class="mock-btn-secondary">Cancel</button>
+            <button class="mock-btn green">Create API key in new project</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- ===== STEP 4 ===== -->
+  <article class="step">
+    <div class="step-num serif">04<em>.</em></div>
+    <div class="step-text">
+      <h3>คัดลอกกุญแจที่ขึ้นต้นด้วย <span class="mono" style="font-size:0.7em;background:var(--bg-deep);padding:2px 6px;border-radius:3px;">AIza...</span></h3>
+      <p>
+        จะมีกล่องแสดงกุญแจขึ้นมา ยาวประมาณ 39 ตัวอักษร ขึ้นต้นด้วย <code class="mono">AIzaSy</code> เสมอ
+        กดปุ่ม <strong>📋 Copy</strong> ข้างๆ เพื่อคัดลอกเข้า clipboard
+      </p>
+      <div class="warn-box">
+        <span class="warn-label">สำคัญ</span>
+        <strong>เก็บคีย์นี้เป็นความลับ</strong> — อย่าโพสต์ลงโซเชียล อย่าส่งแชต อย่า commit ขึ้น GitHub
+        เพราะใครได้ไปจะใช้โควต้าฟรีของคุณได้
+      </div>
+      <div class="tip-box" style="margin-top:10px;">
+        <span class="tip-label">ฟรี</span>
+        Gemini 2.0 Flash มี <strong>โควต้าฟรีรายวัน 1,500 requests/วัน</strong> ใช้ทุกวันไม่หมด
+      </div>
+    </div>
+    <div class="mock">
+      <div class="mock-chrome">
+        <div class="mock-dots"><i></i><i></i><i></i></div>
+        <div class="mock-url">aistudio.google.com/app/apikey</div>
+      </div>
+      <div class="mock-body" style="background:rgba(0,0,0,0.04);">
+        <div class="key-display">
+          <div class="key-eyebrow">YOUR NEW API KEY · KEEP IT SECRET</div>
+          <div class="key-row">
+            <code>AIzaSyD••••••••••••••••••••••••••••••</code>
+            <div class="copy-icon">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+            </div>
+          </div>
+          <div class="key-hint">⚠️ จะแสดงเต็มแค่ครั้งเดียว · กดคัดลอกเก็บไว้</div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- ===== STEP 5 ===== -->
+  <article class="step">
+    <div class="step-num serif">05<em>.</em></div>
+    <div class="step-text">
+      <h3>นำคีย์มาวางใน ScanRx</h3>
+      <p>
+        กลับมาที่หน้า ScanRx → กดปุ่ม <strong>"API Key"</strong> มุมขวาบน (มีแถบสีแดง "ยังไม่ตั้ง")
+        → วางคีย์ลงในช่อง → กด <strong>"บันทึกและเริ่มใช้งาน"</strong>
+      </p>
+      <p>
+        เสร็จแล้ว! กด <strong>"เปิดกล้อง"</strong> แล้วยกฉลากยามาส่อง กดปุ่ม
+        <strong>SCAN NOW</strong> AI จะอ่านและพูดให้ฟังทันที
+      </p>
+      <div class="tip-box">
+        <span class="tip-label">SECURITY</span>
+        คีย์ของคุณ <strong>เก็บไว้ใน localStorage ของเบราว์เซอร์เครื่องนี้เท่านั้น</strong>
+        ไม่ส่งไปเซิร์ฟเวอร์อื่น — ลบได้ทุกเมื่อด้วยปุ่ม "ลบคีย์"
+      </div>
+    </div>
+    <div class="mock">
+      <div class="mock-chrome">
+        <div class="mock-dots"><i></i><i></i><i></i></div>
+        <div class="mock-url">medicine-scanner.html</div>
+      </div>
+      <div class="mock-body" style="background:rgba(0,0,0,0.04);">
+        <div class="mock-scanrx">
+          <div class="mock-scanrx-head">
+            <div class="eyebrow">SETTINGS · 00</div>
+            <h5 class="serif">เชื่อมต่อ <em>Google Gemini</em></h5>
+          </div>
+          <div class="mock-scanrx-body">
+            <div class="mock-scanrx-label">GEMINI API KEY</div>
+            <div class="mock-scanrx-input">AIzaSyD-••••••••••••••••••</div>
+            <div class="mock-scanrx-actions">
+              <button class="mock-scanrx-btn">บันทึกและเริ่มใช้งาน</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+</section>
+
+<!-- ============ FAQ ============ -->
+<section class="faq">
+  <div class="faq-head">
+    <h2 class="serif">คำถาม<br>ที่<em>พบบ่อย.</em></h2>
+    <p>คำตอบสำหรับสิ่งที่หลายคนสงสัย ก่อนสมัครและใช้งาน Gemini API key</p>
+  </div>
+  <div>
+    <details class="faq-item">
+      <summary>ฟรีจริงไหม? มีคิดเงินภายหลังหรือเปล่า?</summary>
+      <div class="answer">
+        ฟรีจริง ภายใต้โควต้า <strong>Free Tier</strong> ของ Gemini API
+        — ปัจจุบัน Gemini 2.0 Flash ให้ใช้ฟรี <code>1,500 requests/วัน</code>
+        ซึ่งเหลือเฟือสำหรับการสแกนฉลากยาในชีวิตประจำวัน
+        Google จะไม่หักเงินอัตโนมัติ เว้นแต่คุณไป upgrade เป็น Paid Tier เอง
+      </div>
+    </details>
+    <details class="faq-item">
+      <summary>ต้องใส่บัตรเครดิตไหม?</summary>
+      <div class="answer">
+        <strong>ไม่ต้อง</strong> — สำหรับ Free Tier ของ Gemini API ใช้แค่ Google Account
+        ไม่ต้องผูกบัตร ไม่ต้องเติมเงิน
+      </div>
+    </details>
+    <details class="faq-item">
+      <summary>คีย์มีอายุไหม? ต้องต่ออายุหรือเปล่า?</summary>
+      <div class="answer">
+        คีย์ <strong>ไม่มีวันหมดอายุ</strong> ใช้ได้ตลอด เว้นแต่คุณกดลบเอง
+        หรือ Google ตรวจพบการใช้งานผิดปกติ (เช่น ถูกขโมยไปใช้สแปม)
+        แนะนำสร้างคีย์ใหม่ทุก 6-12 เดือนเพื่อความปลอดภัย
+      </div>
+    </details>
+    <details class="faq-item">
+      <summary>ข้อมูลภาพฉลากยาของฉันจะถูกส่งไปไหน?</summary>
+      <div class="answer">
+        ส่งตรงไปที่ <strong>Google Gemini API</strong> เพื่อให้ AI วิเคราะห์ ไม่ได้ส่งไปที่อื่น
+        <br><br>
+        Google อาจเก็บข้อมูลที่ส่งใน Free Tier เพื่อพัฒนาโมเดล ตามนโยบาย Free Tier ของ Gemini
+        ถ้ากังวลเรื่องความเป็นส่วนตัวมาก ควรอัปเกรดเป็น <strong>Paid Tier</strong> ซึ่งไม่เก็บข้อมูล
+        — อ่านรายละเอียดที่ <a href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener">ai.google.dev/gemini-api/terms</a>
+      </div>
+    </details>
+    <details class="faq-item">
+      <summary>ถ้าทำคีย์หาย/ลืม จะหาย้อนหลังได้ไหม?</summary>
+      <div class="answer">
+        <strong>ดูย้อนหลังได้เต็มคีย์</strong> — เข้าไปที่ <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">aistudio.google.com/app/apikey</a>
+        คลิกที่คีย์เดิม จะเห็นค่าเต็มอีกครั้ง — หรือสร้างคีย์ใหม่แทนได้ตลอด ฟรี
+      </div>
+    </details>
+    <details class="faq-item">
+      <summary>ใช้ในประเทศไทยได้ไหม?</summary>
+      <div class="answer">
+        <strong>ใช้ได้ปกติ</strong> — Gemini API เปิดให้ใช้ในไทยอย่างเป็นทางการ
+        และอ่านภาษาไทยได้แม่นยำมาก (รองรับ 30+ ภาษา)
+      </div>
+    </details>
+    <details class="faq-item">
+      <summary>คีย์ของคนอื่นใช้แทนได้ไหม?</summary>
+      <div class="answer">
+        <strong>ใช้ได้ แต่ไม่แนะนำ</strong> — เพราะโควต้าจะใช้รวมกับเจ้าของคีย์
+        และเจ้าของจะเห็น log การใช้งาน — ทางที่ดีคือสมัครของตัวเอง ใช้เวลาแค่ 1 นาที
+      </div>
+    </details>
+    <details class="faq-item">
+      <summary>เกิด error "API key not valid" ทำยังไง?</summary>
+      <div class="answer">
+        เช็คตามลำดับ:<br>
+        <strong>1.</strong> คัดลอกคีย์ครบถ้วน ขึ้นต้น <code>AIzaSy</code> หรือไม่<br>
+        <strong>2.</strong> ลองเข้า <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener">aistudio.google.com/app/apikey</a> เพื่อยืนยันว่าคีย์ยังอยู่ในรายการ<br>
+        <strong>3.</strong> ตรวจสอบว่า <strong>Generative Language API</strong> ถูก enable ใน Cloud Project นั้นแล้ว
+        (โดยปกติ AI Studio เปิดให้อัตโนมัติ)<br>
+        <strong>4.</strong> ลบและสร้างคีย์ใหม่ ก็เคยช่วยได้ในบางเคส
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- ============ CTA ============ -->
+<section class="cta">
+  <div class="cta-inner">
+    <div>
+      <h2 class="serif">พร้อมแล้ว?<br>ไปเริ่ม<em>สแกนยา</em>กันเลย</h2>
+      <p>กลับไปที่หน้า ScanRx เปิดกล้อง วางคีย์ที่คัดลอกมา แล้วยกฉลากยามาทดลองสแกนได้ทันที</p>
+    </div>
+    <a class="cta-btn" href="medicine-scanner.html">
+      เปิด ScanRx
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+    </a>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="footer-inner">
+    <div>ScanRx · Setup Guide <span class="dim">— อ่านฉลากยาด้วย AI</span></div>
+    <div>Google Gemini API · Free Tier <span class="dim">©2026</span></div>
+  </div>
+</footer>
+
+<script>
+  // close other details when one opens (accordion behavior)
+  document.querySelectorAll('details.faq-item').forEach(d => {
+    d.addEventListener('toggle', () => {
+      if (d.open) {
+        document.querySelectorAll('details.faq-item').forEach(o => {
+          if (o !== d) o.open = false;
+        });
+      }
+    });
+  });
+</script>
+</body>
+</html>
